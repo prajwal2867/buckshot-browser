@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#050706">
+    <title>Buckshot Roulette — Browser CLI</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main aria-label="Buckshot Roulette">
+      <pre id="screen" aria-live="polite"></pre>
+      <form id="command-form" autocomplete="off">
+        <label id="prompt-label" for="command-input">Command:</label>
+        <input id="command-input" name="command" type="text" autofocus
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          aria-label="Enter a game command">
+      </form>
+    </main>
+    <script src="game.js"></script>
+  </body>
+</html>
