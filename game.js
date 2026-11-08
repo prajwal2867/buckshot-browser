@@ -20,6 +20,14 @@
   const form = document.querySelector("#command-form");
   const input = document.querySelector("#command-input");
   const promptLabel = document.querySelector("#prompt-label");
+  const keypad = document.querySelector("#keypad");
+  const keypadButtons = keypad.querySelectorAll("button");
+  const usesOnScreenKeys = window.matchMedia("(max-width: 640px), (pointer: coarse)");
+  input.readOnly = usesOnScreenKeys.matches;
+  usesOnScreenKeys.addEventListener("change", () => {
+    input.readOnly = usesOnScreenKeys.matches;
+    if (input.readOnly && document.activeElement === input) input.blur();
+  });
 
   class BuckshotGame {
     constructor() {
@@ -493,7 +501,10 @@
         ].join("\n");
         promptLabel.textContent = "Press Enter to begin:";
         input.disabled = false;
-        input.focus();
+        if (!input.readOnly) input.focus();
+        keypadButtons.forEach((button) => {
+          button.disabled = input.disabled;
+        });
         return;
       }
 
@@ -546,7 +557,10 @@
         promptLabel.textContent = "Select an action:";
         input.disabled = false;
       }
-      if (!input.disabled) input.focus();
+      if (!input.disabled && !input.readOnly) input.focus();
+      keypadButtons.forEach((button) => {
+        button.disabled = input.disabled;
+      });
     }
 
     escape(value) {
@@ -568,5 +582,21 @@
     input.value = "";
     if (game.mode === "steal") game.handleSteal(command.trim());
     else game.submit(command);
+  });
+
+  keypad.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+    if (!button || button.disabled) return;
+
+    const key = button.dataset.key;
+    if (key === "enter") {
+      form.requestSubmit();
+    } else if (key === "clear") {
+      input.value = "";
+    } else if (key === "backspace") {
+      input.value = input.value.slice(0, -1);
+    } else {
+      input.value += key;
+    }
   });
 })();

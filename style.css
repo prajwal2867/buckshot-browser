@@ -11,6 +11,10 @@ body {
   padding: 12px;
 }
 
+main {
+  min-width: 0;
+}
+
 pre {
   margin: 0;
   font: inherit;
@@ -39,4 +43,81 @@ pre {
   background: transparent;
   color: inherit;
   font: inherit;
+}
+
+#keypad {
+  display: none;
+}
+
+@media (max-width: 640px), (pointer: coarse) {
+  :root {
+    font-size: clamp(10px, 3vw, 14px);
+  }
+
+  body {
+    box-sizing: border-box;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    padding: 8px;
+  }
+
+  main {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  #screen {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+
+  #screen::-webkit-scrollbar {
+    display: none;
+  }
+
+  #command-form {
+    flex: 0 0 auto;
+    min-height: 32px;
+  }
+
+  #command-input {
+    font-size: 16px;
+  }
+
+  #keypad {
+    display: grid;
+    flex: 0 0 auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    padding-top: 6px;
+  }
+
+  #keypad button {
+    min-width: 0;
+    min-height: 42px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background: #222;
+    color: inherit;
+    font: inherit;
+    font-size: 16px;
+    touch-action: manipulation;
+  }
+
+  #keypad button:active {
+    background: #444;
+  }
+
+  #keypad button:disabled {
+    opacity: 0.45;
+  }
+
+  #keypad .enter-key {
+    grid-column: span 3;
+  }
 }
