@@ -331,3 +331,16 @@ test("Dealer does not waste healing items after its cut wire", () => {
   game.dealer.inventory = ["Cigarette Pack", "Expired Medicine"];
   assert.equal(game.chooseDealerItem(), null);
 });
+
+
+test("Adrenaline excludes already-active Hand Saw and unavailable Burner Phone", () => {
+  const game = boot();
+  game.start("double");
+  game.isSawedOff = true;
+  game.chamber = ["live"];
+  game.player.inventory = ["Hand Saw", "Burner Phone"];
+  game.dealer.inventory = ["Adrenaline"];
+  assert.equal(game.useItem(game.dealer, "Adrenaline"), false);
+  assert.deepEqual(Array.from(game.player.inventory), ["Hand Saw", "Burner Phone"]);
+  assert.deepEqual(Array.from(game.dealer.inventory), ["Adrenaline"]);
+});
