@@ -14,7 +14,7 @@
   const promptLabel = $("#prompt-label");
   const keypad = $("#keypad");
   const keypadButtons = keypad.querySelectorAll("button");
-  const DEALER_DELAY_MS = 1800;
+  const DEALER_DELAY_MS = 5000;
 
   const BASE_ITEMS = [
     "Magnifying Glass", "Handcuffs", "Beer", "Cigarette Pack", "Hand Saw"
@@ -769,9 +769,15 @@
         lines.push(`<span class="status">(${this.current.name}'s turn)${this.busy ? " — waiting" : ""}</span>`);
       }
       lines.push("", '<span class="title">RECENT EVENTS:</span>');
-      for (const event of this.events.slice(-8)) lines.push(`<span class="event">&gt; ${this.escape(event)}</span>`);
-      screen.innerHTML = lines.join("\n");
-      screen.scrollTop = screen.scrollHeight;
+      const previousEventLog = screen.querySelector(".event-log");
+      const wasAtEventLogBottom = !previousEventLog ||
+        previousEventLog.scrollHeight - previousEventLog.clientHeight - previousEventLog.scrollTop < 24;
+      const eventMarkup = this.events.slice(-8)
+        .map((event) => `<div class="event">&gt; ${this.escape(event)}</div>`)
+        .join("");
+      screen.innerHTML = `${lines.join("\n")}<div class="event-log" role="log" aria-label="Recent events" aria-live="polite">${eventMarkup}</div>`;
+      const eventLog = screen.querySelector(".event-log");
+      if (wasAtEventLogBottom) eventLog.scrollTop = eventLog.scrollHeight;
 
       const prompts = {
         item: "Item number:", steal: "Steal item number:",
