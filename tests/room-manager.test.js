@@ -107,3 +107,15 @@ test("a socket cannot create or request to join multiple rooms", () => {
     socketId: "guest-1", username: "GuestPlayer", code: "9134"
   }, 104).error, "You are already in a room.");
 });
+
+
+test("room updates persist match state through the room manager", () => {
+  const manager = new RoomManager({ randomCode: () => "1234" });
+  const room = manager.create({ socketId: "host", username: "Alice" });
+  const updated = manager.update(room.code, (current) => {
+    current.status = "playing";
+    current.game = { status: "playing", turnPlayerId: "host" };
+  });
+  assert.equal(updated.status, "playing");
+  assert.deepEqual(manager.get(room.code).game, { status: "playing", turnPlayerId: "host" });
+});
