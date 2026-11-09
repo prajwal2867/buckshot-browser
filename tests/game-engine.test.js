@@ -10,7 +10,11 @@ function boot(randomValues = []) {
   const values = [...randomValues];
   const math = Object.create(Math);
   math.random = () => values.length ? values.shift() : 0.5;
-  const screen = { innerHTML: "", scrollTop: 0, scrollHeight: 0 };
+  const eventLog = { scrollTop: 0, scrollHeight: 0, clientHeight: 0 };
+  const screen = {
+    innerHTML: "", scrollTop: 0, scrollHeight: 0,
+    querySelector: (selector) => selector === ".event-log" ? eventLog : null
+  };
   const input = { value: "", readOnly: false, disabled: false, focus() {}, blur() {} };
   const form = { addEventListener() {}, requestSubmit() {} };
   const keypad = { querySelectorAll: () => [], addEventListener() {} };
@@ -140,7 +144,7 @@ test("Double or Nothing payout formula is deterministic and later sets double th
   assert.equal(game.winnings, firstSet * 2);
 });
 
-test("Dealer stops its item phase when Adrenaline steals a Beer that reloads the shotgun", () => {
+test("Dealer saves Adrenaline rather than stealing Beer when it would hand over initiative", () => {
   const game = boot();
   game.start("double");
   game.current = game.dealer;
@@ -151,10 +155,10 @@ test("Dealer stops its item phase when Adrenaline steals a Beer that reloads the
   game.liveRemaining = 0;
   game.blankRemaining = 1;
   game.dealerUseItems();
-  assert.equal(game.current, game.player);
-  assert.equal(game.dealer.inventory.includes("Adrenaline"), false);
-  assert.ok(game.dealer.inventory.length <= 8);
-  assert.ok(game.chamber.length >= 2);
+  assert.equal(game.current, game.dealer);
+  assert.deepEqual(Array.from(game.dealer.inventory), ["Adrenaline"]);
+  assert.deepEqual(Array.from(game.player.inventory), ["Beer"]);
+  assert.equal(game.chamber.length, 1);
 });
 
 test("zero health ends a Double or Nothing run even in stages 1 and 2", () => {
@@ -386,6 +390,7 @@ test("choosing an Adrenaline target cancels its timeout and uses the stolen item
 
 test("Double or Nothing is locked until the player wins Story Mode", () => {
   const game = boot();
+  game.submit("0"); // Select free play at the wallet prompt.
   game.submit("2");
   assert.equal(game.mode, "start");
   assert.equal(game.gameMode, "story");
@@ -402,6 +407,7 @@ test("winning Story Mode unlocks Double or Nothing", () => {
   assert.equal(game.checkStageEnd(), true);
   assert.equal(game.doubleUnlocked, true);
   game.reset();
+  game.submit("0"); // Select free play before choosing a game mode.
   game.submit("2");
   assert.equal(game.gameMode, "double");
   assert.equal(game.mode, "action");
