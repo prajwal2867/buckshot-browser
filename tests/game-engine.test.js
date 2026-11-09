@@ -309,3 +309,25 @@ test("Story stage 1 automatically advances after both scripted magazines", () =>
   assert.equal(game.player.health, 4);
   assert.equal(game.dealer.health, 4);
 });
+
+
+test("Adrenaline cannot select handcuffs when the target is already cuffed", () => {
+  const game = boot();
+  game.start("double");
+  game.player.handcuffed = true;
+  game.player.inventory = ["Handcuffs"];
+  game.dealer.inventory = ["Adrenaline"];
+  assert.equal(game.useItem(game.dealer, "Adrenaline"), false);
+  assert.deepEqual(Array.from(game.player.inventory), ["Handcuffs"]);
+  assert.deepEqual(Array.from(game.dealer.inventory), ["Adrenaline"]);
+});
+
+test("Dealer does not waste healing items after its cut wire", () => {
+  const game = boot();
+  game.start("story");
+  game.stage = 3;
+  game.dealer.health = 0;
+  game.dealer.cutWire = true;
+  game.dealer.inventory = ["Cigarette Pack", "Expired Medicine"];
+  assert.equal(game.chooseDealerItem(), null);
+});
