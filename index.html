@@ -49,17 +49,15 @@
 
       <div id="multiplayer-room" hidden>
         <p id="multiplayer-status" class="status-line" role="status">Connecting...</p>
-        <div id="room-code-card" hidden>
-          <p class="eyebrow">ROOM CODE</p>
-          <strong id="room-code-display" class="room-code"></strong>
-          <p class="help-text">Share this code. The other player must be approved before entering.</p>
-        </div>
         <div id="join-request" class="join-request" hidden>
-          <p><strong id="join-request-name"></strong> wants to join your room.</p>
+          <p>&gt; <strong id="join-request-name"></strong> wants to join ...</p>
           <div class="inline-controls">
             <button id="join-accept" type="button">Accept [ 1 ]</button>
             <button id="join-decline" class="secondary-button" type="button">Decline [ 2 ]</button>
           </div>
+        </div>
+        <div id="room-code-card" hidden>
+          <p class="room-code-line">&gt; ROOM CODE: <strong id="room-code-display" class="room-code"></strong></p>
         </div>
         <div id="room-players" class="room-players" hidden></div>
         <button id="game-start" type="button" hidden>Start match</button>
