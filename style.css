@@ -15,10 +15,34 @@ main {
   min-width: 0;
 }
 
-pre {
+#screen {
   margin: 0;
   font: inherit;
   line-height: 1.2;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.event-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #555;
+  background: #0b0b0b;
+  scrollbar-color: #666 #171717;
+}
+
+.event {
+  display: block;
+  padding: 7px 9px;
+  border: 1px solid #333;
+  border-radius: 3px;
+  background: #171717;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
