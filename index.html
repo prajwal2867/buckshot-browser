@@ -64,6 +64,21 @@
           </div>
         </div>
         <div id="room-players" class="room-players" hidden></div>
+        <button id="game-start" type="button" hidden>Start match</button>
+        <section id="pvp-game" class="pvp-game" hidden aria-label="PvP match">
+          <h2>Match</h2>
+          <p id="pvp-turn" class="status-line"></p>
+          <div id="pvp-scoreboard" class="pvp-scoreboard"></div>
+          <p id="pvp-magazine" class="help-text"></p>
+          <p id="pvp-known-shell" class="help-text"></p>
+          <div id="pvp-controls" class="pvp-controls">
+            <button id="pvp-shoot-opponent" type="button">Shoot opponent</button>
+            <button id="pvp-shoot-self" class="secondary-button" type="button">Shoot yourself</button>
+          </div>
+          <div id="pvp-inventory" class="pvp-inventory"></div>
+          <div id="pvp-steal" class="pvp-steal" hidden></div>
+          <div id="pvp-events" class="pvp-events" aria-live="polite"></div>
+        </section>
         <button id="room-leave" class="secondary-button" type="button">Leave room</button>
       </div>
 
