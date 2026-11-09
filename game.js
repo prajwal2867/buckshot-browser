@@ -512,7 +512,8 @@
     }
 
     checkStageEnd() {
-      const playerDead = this.player.dead || (this.player.health <= 0 && (this.gameMode === "double" || this.stage < 3));
+      // The player's run ends immediately at zero health in every mode and stage.
+      const playerDead = this.player.dead || this.player.health <= 0;
       const dealerDead = this.dealer.dead || (this.dealer.health <= 0 && (this.gameMode === "double" || this.stage < 3));
       if (!playerDead && !dealerDead) return false;
 
@@ -521,8 +522,13 @@
       this.addEvent(`Stage ${this.stage} ends. ${playerWon ? "You win." : "The Dealer wins."}`);
 
       if (this.gameMode === "story") {
-        if (this.stage < 3) {
-          if (!playerWon) this.storyPenalty += this.stage === 1 ? 4000 : (this.stage === 2 && this.storyPenalty === 0 ? 4000 : 2000);
+        if (playerDead) {
+          this.gameOver = true;
+          this.mode = "restart";
+          this.addEvent("You ran out of health. Story Mode is over.");
+          this.settleBet(false);
+          this.addEvent(`Final Story Mode cash: ${this.storyCash().toLocaleString()}.`);
+        } else if (this.stage < 3) {
           this.advanceStage();
         } else if (playerWon) {
           this.gameOver = true;
