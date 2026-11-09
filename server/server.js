@@ -28,7 +28,7 @@ function createAppServer({ roomManager = new RoomManager() } = {}) {
 if (require.main === module) {
   const { httpServer } = createAppServer();
   const port = Number(process.env.PORT) || 3000;
-  httpServer.listen(port, "0.0.0.0", () => console.log(\`Buckshot multiplayer server listening on port \${port}\`));
+  httpServer.listen(port, "0.0.0.0", () => console.log(`Buckshot multiplayer server listening on port ${port}`));
 }
 
 module.exports = { createAppServer };
