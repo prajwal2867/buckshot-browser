@@ -3,6 +3,7 @@
 
   const byId = (id) => document.getElementById(id);
   const panel = byId("multiplayer-panel");
+  const storyMode = byId("story-mode");
   const usernameKey = "buckshot-browser.username";
   const usernamePattern = /^[A-Za-z0-9_-]{3,16}$/;
   let socket = null;
@@ -12,7 +13,7 @@
   let latestGame = null;
 
   const el = {
-    open: byId("multiplayer-open"), close: byId("multiplayer-close"),
+    open: byId("multiplayer-open"), storyOpen: byId("story-open"),
     identity: byId("multiplayer-identity"), username: byId("multiplayer-username"),
     saveUsername: byId("username-save"), changeUsername: byId("username-change"),
     lobby: byId("multiplayer-lobby"), playerName: byId("multiplayer-player-name"),
@@ -69,9 +70,9 @@
       isHost = true;
       el.room.hidden = false;
       el.lobby.hidden = true;
-      el.status.textContent = "Waiting for an opponent to request access.";
+      el.status.textContent = "WAITING ...";
       el.codeCard.hidden = false;
-      el.codeDisplay.textContent = data.code;
+      el.codeDisplay.textContent = data.code.split("").join(" ");
       el.request.hidden = true;
       el.players.hidden = true;
       el.start.hidden = true;
@@ -83,7 +84,7 @@
       isHost = false;
       el.room.hidden = false;
       el.lobby.hidden = true;
-      el.status.textContent = "Join request sent. Waiting for host approval.";
+      el.status.textContent = "WAITING FOR HOST APPROVAL ...";
       el.codeCard.hidden = true;
       setMessage("Request sent to " + data.hostUsername + ".");
     });
@@ -91,7 +92,7 @@
       pendingRequest = data;
       el.request.hidden = false;
       el.requestName.textContent = data.username;
-      setMessage("A player wants to join your room.");
+      setMessage("");
     });
     socket.on("room:declined", () => {
       activeRoomCode = null;
@@ -103,10 +104,12 @@
       pendingRequest = null;
       el.request.hidden = true;
       el.players.hidden = false;
-      el.players.textContent = data.host.username + "  vs  " + data.guest.username;
-      el.status.textContent = "Opponent connected. Start when ready.";
+      el.players.textContent = data.host.username + " VS " + data.guest.username;
+      el.status.textContent = "";
       el.start.hidden = false;
-      setMessage("Lobby ready. The host can start the match.");
+      el.start.textContent = "Start [ 1 ]";
+      el.leave.textContent = "Leave [ 2 ]";
+      setMessage("");
     });
     socket.on("room:joined", (data) => {
       activeRoomCode = data.code;
@@ -114,13 +117,14 @@
       el.room.hidden = false;
       el.lobby.hidden = true;
       el.codeCard.hidden = false;
-      el.codeDisplay.textContent = data.code;
+      el.codeDisplay.textContent = data.code.split("").join(" ");
       el.request.hidden = true;
       el.players.hidden = false;
-      el.players.textContent = data.host.username + "  vs  " + data.guest.username;
-      el.status.textContent = "Connected. Waiting for the host to start.";
+      el.players.textContent = data.host.username + " VS " + data.guest.username;
+      el.status.textContent = "WAITING FOR HOST ...";
       el.start.hidden = true;
-      setMessage("You joined the room.");
+      el.leave.textContent = "Leave room [ 1 ]";
+      setMessage("");
     });
     socket.on("game:started", () => {
       el.start.hidden = true;
@@ -206,11 +210,19 @@
     socket.emit("game:action", { code: activeRoomCode, action });
   }
 
-  el.open.addEventListener("click", () => {
-    panel.hidden = !panel.hidden;
-    if (!panel.hidden) showIdentity();
-  });
-  el.close.addEventListener("click", () => { panel.hidden = true; });
+  function showMode(mode) {
+    const multiplayer = mode === "multiplayer";
+    panel.hidden = !multiplayer;
+    storyMode.hidden = multiplayer;
+    el.open.classList.toggle("active", multiplayer);
+    el.storyOpen.classList.toggle("active", !multiplayer);
+    el.open.setAttribute("aria-pressed", String(multiplayer));
+    el.storyOpen.setAttribute("aria-pressed", String(!multiplayer));
+    if (multiplayer) showIdentity();
+  }
+
+  el.open.addEventListener("click", () => showMode("multiplayer"));
+  el.storyOpen.addEventListener("click", () => showMode("story"));
   el.saveUsername.addEventListener("click", () => {
     const username = el.username.value.trim();
     if (!usernamePattern.test(username)) {
