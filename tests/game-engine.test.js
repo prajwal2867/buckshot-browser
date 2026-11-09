@@ -344,3 +344,34 @@ test("Adrenaline excludes already-active Hand Saw and unavailable Burner Phone",
   assert.deepEqual(Array.from(game.player.inventory), ["Hand Saw", "Burner Phone"]);
   assert.deepEqual(Array.from(game.dealer.inventory), ["Adrenaline"]);
 });
+
+
+test("Adrenaline expires after the selection window and consumes itself", () => {
+  const game = boot();
+  game.start("double");
+  game.player.inventory = ["Adrenaline"];
+  game.dealer.inventory = ["Beer"];
+  assert.equal(game.useItem(game.player, "Adrenaline"), "steal");
+  assert.equal(game.mode, "steal");
+  assert.equal(game.stealTimer, 1);
+  game.expireAdrenaline();
+  assert.equal(game.mode, "action");
+  assert.deepEqual(Array.from(game.player.inventory), []);
+  assert.deepEqual(Array.from(game.dealer.inventory), ["Beer"]);
+});
+
+test("choosing an Adrenaline target cancels its timeout and uses the stolen item", () => {
+  const game = boot();
+  game.start("double");
+  game.player.inventory = ["Adrenaline"];
+  game.dealer.inventory = ["Beer"];
+  game.chamber = ["blank", "live"];
+  game.liveRemaining = 1;
+  game.blankRemaining = 1;
+  assert.equal(game.useItem(game.player, "Adrenaline"), "steal");
+  game.handleSteal("1");
+  assert.equal(game.stealTimer, null);
+  assert.deepEqual(Array.from(game.player.inventory), []);
+  assert.deepEqual(Array.from(game.dealer.inventory), []);
+  assert.equal(game.mode, "action");
+});
