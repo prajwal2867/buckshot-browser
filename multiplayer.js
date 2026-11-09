@@ -105,6 +105,8 @@
       activeRoomCode = null;
       el.room.hidden = true;
       el.lobby.hidden = false;
+      el.joinForm.hidden = true;
+      el.joinOpen.hidden = false;
       setMessage("The host declined your request.");
     });
     socket.on("room:player-joined", (data) => {
