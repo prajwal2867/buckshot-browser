@@ -2,14 +2,14 @@
 
 const crypto = require("node:crypto");
 
-const CREATE_ROOM = \`
+const CREATE_ROOM = `
   if redis.call("EXISTS", KEYS[2]) == 1 then return -1 end
   local created = redis.call("SET", KEYS[1], ARGV[1], "EX", ARGV[2], "NX")
   if not created then return 0 end
   redis.call("SET", KEYS[2], "host:" .. ARGV[3], "EX", ARGV[2])
   return 1
-\`;
-const REQUEST_JOIN = \`
+`;
+const REQUEST_JOIN = `
   local raw = redis.call("GET", KEYS[1])
   if not raw then return {"error", "Invalid code."} end
   local room = cjson.decode(raw)
@@ -23,8 +23,8 @@ const REQUEST_JOIN = \`
   redis.call("SET", KEYS[2], "pending:" .. room.code, "EX", ARGV[4])
   redis.call("SET", ARGV[5] .. "socket:" .. room.host.socketId, "host:" .. room.code, "EX", ARGV[4])
   return {"ok", room.pending.requestId, room.host.socketId, room.code, room.host.username}
-\`;
-const RESPOND = \`
+`;
+const RESPOND = `
   local raw = redis.call("GET", KEYS[1])
   if not raw then return {"error", "That join request is no longer available."} end
   local room = cjson.decode(raw)
@@ -46,8 +46,8 @@ const RESPOND = \`
     return {"ok", "accepted", room.code, room.host.username, room.host.socketId, room.guest.username, room.guest.socketId}
   end
   return {"ok", "declined", room.code, guest.socketId}
-\`;
-const DISCONNECT = \`
+`;
+const DISCONNECT = `
   local membership = redis.call("GET", KEYS[1])
   if not membership then return 0 end
   redis.call("DEL", KEYS[1])
@@ -76,13 +76,13 @@ const DISCONNECT = \`
   redis.call("SET", ARGV[3] .. room.host.socketId, "host:" .. room.code, "EX", ARGV[5])
   redis.call("SET", roomKey, cjson.encode(room), "EX", ARGV[5])
   return 1
-\`;
-const COMPARE_AND_SET = \`
+`;
+const COMPARE_AND_SET = `
   local current = redis.call("GET", KEYS[1])
   if not current or current ~= ARGV[1] then return 0 end
   redis.call("SET", KEYS[1], ARGV[2], "EX", ARGV[3])
   return 1
-\`;
+`;
 
 class RedisRoomManager {
   constructor(redis, { ttlSeconds = 300, keyPrefix = "buckshot:rooms:", randomCode = null } = {}) {
@@ -92,13 +92,13 @@ class RedisRoomManager {
     this.keyPrefix = keyPrefix;
     this.randomCode = randomCode || (() => String(1000 + crypto.randomInt(0, 9000)));
   }
-  roomKey(code) { return \`\${this.keyPrefix}room:\${code}\`; }
-  socketKey(socketId) { return \`\${this.keyPrefix}socket:\${socketId}\`; }
+  roomKey(code) { return `${this.keyPrefix}room:${code}`; }
+  socketKey(socketId) { return `${this.keyPrefix}socket:${socketId}`; }
 
   async create(host, now = Date.now()) {
     for (let attempt = 0; attempt < 30; attempt++) {
       const code = this.randomCode();
-      if (!/^\\d{4}$/.test(code)) continue;
+      if (!/^\d{4}$/.test(code)) continue;
       const room = { code, status: "waiting", host: { socketId: host.socketId, username: host.username },
         guest: null, pending: null, game: null, createdAt: now, updatedAt: now };
       const result = await this.redis.eval(CREATE_ROOM, 2, this.roomKey(code), this.socketKey(host.socketId),
@@ -110,7 +110,7 @@ class RedisRoomManager {
   }
 
   async requestJoin({ socketId, username, code }, now = Date.now()) {
-    if (!/^\\d{4}$/.test(String(code))) return { ok: false, error: "Invalid code." };
+    if (!/^\d{4}$/.test(String(code))) return { ok: false, error: "Invalid code." };
     const response = await this.redis.eval(REQUEST_JOIN, 2, this.roomKey(String(code)), this.socketKey(socketId),
       socketId, JSON.stringify({ requestId: crypto.randomUUID(), socketId, username }), now, this.ttlSeconds, this.keyPrefix);
     if (response[0] !== "ok") return { ok: false, error: response[1] };
