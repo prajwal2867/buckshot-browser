@@ -569,7 +569,9 @@
         case "Adrenaline": {
           const candidates = other.inventory.filter((candidate) =>
             candidate !== "Adrenaline" &&
-            !(candidate === "Handcuffs" && other.handcuffed)
+            !(candidate === "Handcuffs" && other.handcuffed) &&
+            !(candidate === "Hand Saw" && this.isSawedOff) &&
+            !(candidate === "Burner Phone" && this.chamber.length < 2)
           );
           if (!candidates.length) return false;
           if (owner === this.player && !stolen) {
