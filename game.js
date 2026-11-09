@@ -222,6 +222,9 @@
       this.liveRemaining = shells.filter((s) => s === "live").length;
       this.blankRemaining = shells.length - this.liveRemaining;
       this.isSawedOff = false;
+      // A fresh magazine clears any unused handcuff effect.
+      this.player.handcuffed = false;
+      this.dealer.handcuffed = false;
       this.knownShell = { player: null, dealer: null };
       this.futureKnowledge = { player: {}, dealer: {} };
       this.distributeItems();
@@ -342,6 +345,10 @@
       }
     }
 
+    calculateTimedPayout(elapsedSeconds) {
+      return Math.max(10, Math.floor(70000 - (elapsedSeconds * 200 / 3)));
+    }
+
     checkStageEnd() {
       const playerDead = this.player.dead || (this.player.health <= 0 && (this.gameMode === "double" || this.stage < 3));
       const dealerDead = this.dealer.dead || (this.dealer.health <= 0 && (this.gameMode === "double" || this.stage < 3));
@@ -376,7 +383,7 @@
       } else {
         if (this.setNumber === 1) {
           const elapsedSeconds = (Date.now() - this.setStartedAt) / 1000;
-          this.winnings = Math.max(10, Math.floor(70000 - (elapsedSeconds * 200 / 3)));
+          this.winnings = this.calculateTimedPayout(elapsedSeconds);
           this.addEvent(`Initial set cleared. Your starting payout is ${this.winnings.toLocaleString()}.`);
         } else {
           this.winnings *= 2;
@@ -526,18 +533,21 @@
           this.isSawedOff = true;
           this.addEvent(`${owner.name} saws off the barrel. The next live shot deals 2 damage.`);
           return true;
-        case "Inverter":
-          this.chamber[0] = this.chamber[0] === "live" ? "blank" : "live";
-          if (this.chamber[0] === "live") { this.liveRemaining++; this.blankRemaining--; }
+        case "Inverter": {
+          const flipped = this.chamber[0] === "live" ? "blank" : "live";
+          this.chamber[0] = flipped;
+          if (flipped === "live") { this.liveRemaining++; this.blankRemaining--; }
           else { this.liveRemaining--; this.blankRemaining++; }
-          for (const key of ["player", "dealer"]) {
-            if (this.futureKnowledge[key][0]) {
-              this.futureKnowledge[key][0] = this.futureKnowledge[key][0] === "live" ? "blank" : "live";
-            }
+          // Preserve any information already held about this exact shell.
+          // The user of the inverter also knows what they changed it into.
+          for (const participant of ["player", "dealer"]) {
+            if (this.knownShell[participant]) this.knownShell[participant] = flipped;
+            if (this.futureKnowledge[participant][0]) this.futureKnowledge[participant][0] = flipped;
           }
-          this.knownShell = { player: null, dealer: null };
-          this.addEvent(`${owner.name} inverts the current shell.`);
+          this.knownShell[key] = flipped;
+          this.addEvent(`${owner.name} inverts the current shell to ${flipped.toUpperCase()}.`);
           return true;
+        }
         case "Burner Phone": {
           if (this.chamber.length < 2) return false;
           const index = randomInt(1, this.chamber.length - 1);
@@ -611,10 +621,12 @@
       if (inventory.includes("Adrenaline") && this.player.inventory.some((i) => i !== "Adrenaline")) return "Adrenaline";
       if (inventory.includes("Magnifying Glass") && !known && this.liveRemaining && this.blankRemaining) return "Magnifying Glass";
       if (inventory.includes("Burner Phone") && this.chamber.length > 1) return "Burner Phone";
-      if (inventory.includes("Hand Saw") && known === "live" && !this.isSawedOff) return "Hand Saw";
+      if (inventory.includes("Hand Saw") && !this.isSawedOff &&
+          (known === "live" || (!known && this.liveRemaining >= this.blankRemaining))) return "Hand Saw";
       if (inventory.includes("Inverter") && known === "blank" && this.chamber.length) return "Inverter";
       if (inventory.includes("Beer") && known === "blank" && this.chamber.length > 1) return "Beer";
-      if (inventory.includes("Expired Medicine") && this.dealer.health <= this.dealer.maxHealth - 2) return "Expired Medicine";
+      if (inventory.includes("Expired Medicine") && this.dealer.health > 1 &&
+          this.dealer.health <= this.dealer.maxHealth - 2) return "Expired Medicine";
       return null;
     }
 
