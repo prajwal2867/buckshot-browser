@@ -569,7 +569,7 @@
         case "Adrenaline": {
           const candidates = other.inventory.filter((candidate) =>
             candidate !== "Adrenaline" &&
-            !(candidate === "Handcuffs" && owner.handcuffed)
+            !(candidate === "Handcuffs" && other.handcuffed)
           );
           if (!candidates.length) return false;
           if (owner === this.player && !stolen) {
@@ -616,17 +616,18 @@
     chooseDealerItem() {
       const inventory = this.dealer.inventory;
       const known = this.currentKnowledge(this.dealer);
-      if (inventory.includes("Cigarette Pack") && this.dealer.health < this.dealer.maxHealth) return "Cigarette Pack";
+      if (inventory.includes("Cigarette Pack") && !this.dealer.cutWire &&
+          this.dealer.health < this.dealer.maxHealth) return "Cigarette Pack";
       if (inventory.includes("Handcuffs") && !this.player.handcuffed) return "Handcuffs";
       if (inventory.includes("Adrenaline") && this.player.inventory.some((i) => i !== "Adrenaline")) return "Adrenaline";
       if (inventory.includes("Magnifying Glass") && !known && this.liveRemaining && this.blankRemaining) return "Magnifying Glass";
       if (inventory.includes("Burner Phone") && this.chamber.length > 1) return "Burner Phone";
       if (inventory.includes("Hand Saw") && !this.isSawedOff &&
-          (known === "live" || (!known && this.liveRemaining >= this.blankRemaining))) return "Hand Saw";
+          (known === "live" || (!known && this.liveRemaining > this.blankRemaining))) return "Hand Saw";
       if (inventory.includes("Inverter") && known === "blank" && this.chamber.length) return "Inverter";
       if (inventory.includes("Beer") && known === "blank" && this.chamber.length > 1) return "Beer";
-      if (inventory.includes("Expired Medicine") && this.dealer.health > 1 &&
-          this.dealer.health <= this.dealer.maxHealth - 2) return "Expired Medicine";
+      if (inventory.includes("Expired Medicine") && !this.dealer.cutWire &&
+          this.dealer.health > 1 && this.dealer.health <= this.dealer.maxHealth - 2) return "Expired Medicine";
       return null;
     }
 
