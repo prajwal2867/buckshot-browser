@@ -27,7 +27,7 @@ const REQUEST_JOIN = `
   room.updatedAt = tonumber(ARGV[3])
   redis.call("SET", KEYS[1], cjson.encode(room), "EX", ARGV[4])
   redis.call("SET", KEYS[2], "pending:" .. room.code, "EX", ARGV[4])
-  redis.call("SET", KEYS[3], "host:" .. room.code, "EX", ARGV[4])
+  redis.call("SET", ARGV[5] .. "socket:" .. room.host.socketId, "host:" .. room.code, "EX", ARGV[4])
   return {"ok", room.pending.requestId, room.host.socketId, room.code, room.host.username}
 `;
 
@@ -146,18 +146,16 @@ class RedisRoomManager {
   async requestJoin({ socketId, username, code }, now = Date.now()) {
     if (!/^\d{4}$/.test(String(code))) return { ok: false, error: "Invalid code." };
     const requestId = crypto.randomUUID();
-    const room = await this.get(String(code));
-    if (!room) return { ok: false, error: "Invalid code." };
     const response = await this.redis.eval(
       REQUEST_JOIN,
-      3,
+      2,
       this.roomKey(String(code)),
       this.socketKey(socketId),
-      this.socketKey(room.host.socketId),
       socketId,
       JSON.stringify({ requestId, socketId, username }),
       now,
-      this.ttlSeconds
+      this.ttlSeconds,
+      this.keyPrefix
     );
     if (response[0] !== "ok") return { ok: false, error: response[1] };
     return {
