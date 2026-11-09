@@ -34,9 +34,10 @@
           <button id="username-change" class="text-button" type="button">Change</button>
         </p>
         <div class="multiplayer-actions">
-          <button id="room-create" type="button">Create room</button>
-          <form id="room-join-form">
-            <label for="room-code">Join with a code</label>
+          <button id="room-create" type="button">&gt; CREATE ROOM [ 1 ]</button>
+          <button id="room-join-open" type="button">&gt; JOIN WITH CODE [ 2 ]</button>
+          <form id="room-join-form" hidden>
+            <label for="room-code">Enter room code:</label>
             <div class="inline-controls">
               <input id="room-code" inputmode="numeric" autocomplete="one-time-code"
                 maxlength="4" pattern="[0-9]{4}" placeholder="0000" aria-label="Four-digit room code">
@@ -56,8 +57,8 @@
         <div id="join-request" class="join-request" hidden>
           <p><strong id="join-request-name"></strong> wants to join your room.</p>
           <div class="inline-controls">
-            <button id="join-decline" class="secondary-button" type="button">Decline</button>
-            <button id="join-accept" type="button">Accept</button>
+            <button id="join-accept" type="button">Accept [ 1 ]</button>
+            <button id="join-decline" class="secondary-button" type="button">Decline [ 2 ]</button>
           </div>
         </div>
         <div id="room-players" class="room-players" hidden></div>
