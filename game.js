@@ -1,430 +1,687 @@
 (() => {
   "use strict";
 
-  const LEVEL_HEALTH = [2, 4, 4];
-  const ITEMS_PER_LEVEL = [3, 4, 5];
-  const DEALER_DELAY_MS = 10_000;
-  const ITEM_PRIORITY = [
-    "Magnifying Glass",
-    "Adrenaline",
-    "Handcuffs",
-    "Hand Saw",
-    "Burner Phone",
-    "Inverter",
-    "Cigarette Pack",
-    "Beer",
-    "Expired Medicine",
-  ];
+  /*
+   * Buckshot Browser — rules engine
+   * Story mode and Double or Nothing are kept separate so that one mode's
+   * randomisation and item pool cannot leak into the other.
+   */
 
-  const screen = document.querySelector("#screen");
-  const form = document.querySelector("#command-form");
-  const input = document.querySelector("#command-input");
-  const promptLabel = document.querySelector("#prompt-label");
-  const keypad = document.querySelector("#keypad");
+  const $ = (selector) => document.querySelector(selector);
+  const screen = $("#screen");
+  const form = $("#command-form");
+  const input = $("#command-input");
+  const promptLabel = $("#prompt-label");
+  const keypad = $("#keypad");
   const keypadButtons = keypad.querySelectorAll("button");
-  const usesOnScreenKeys = window.matchMedia("(max-width: 640px), (pointer: coarse)");
-  input.readOnly = usesOnScreenKeys.matches;
-  usesOnScreenKeys.addEventListener("change", () => {
-    input.readOnly = usesOnScreenKeys.matches;
-    if (input.readOnly && document.activeElement === input) input.blur();
-  });
+  const DEALER_DELAY_MS = 1800;
+
+  const BASE_ITEMS = [
+    "Magnifying Glass", "Handcuffs", "Beer", "Cigarette Pack", "Hand Saw"
+  ];
+  const EXTRA_ITEMS = [
+    "Adrenaline", "Burner Phone", "Inverter", "Expired Medicine"
+  ];
+  const ALL_ITEMS = [...BASE_ITEMS, ...EXTRA_ITEMS];
+
+  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+  const randomInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
+  const pick = (array) => array[Math.floor(Math.random() * array.length)];
 
   class BuckshotGame {
     constructor() {
-      this.level = 1;
-      this.reloadNumber = 0;
       this.player = this.makeEntity("Player");
       this.dealer = this.makeEntity("Dealer");
       this.current = this.player;
       this.opponent = this.dealer;
-      this.chamber = [];
-      this.isSawedOff = false;
-      this.results = [];
-      this.events = [];
       this.mode = "start";
+      this.gameMode = "story";
+      this.doubleUnlocked = this.loadDoubleOrNothingUnlock();
+      this.stage = 1;
+      this.reloadNumber = 0;
+      this.stageReloads = 0;
+      this.chamber = [];
+      this.liveRemaining = 0;
+      this.blankRemaining = 0;
+      this.knownShell = { player: null, dealer: null };
+      this.futureKnowledge = { player: {}, dealer: {} };
+      this.isSawedOff = false;
+      this.events = [];
+      this.results = [];
       this.gameOver = false;
       this.busy = false;
+      this.timer = null;
+      this.stealTimer = null;
+      this.setNumber = 1;
+      this.winnings = 0;
+      this.setStartedAt = 0;
+      this.storyPenalty = 0;
+      this.cigarettesUsed = 0;
+      this.beersUsed = 0;
+      this.stealableItems = [];
+      this.stealOwner = null;
       this.render();
     }
 
     makeEntity(name) {
       return {
-        name,
-        health: 0,
-        maxHealth: 0,
-        inventory: [],
-        isHandcuffed: false,
+        name, health: 0, maxHealth: 0, fadedHealth: 0, cutWire: false, dead: false,
+        inventory: [], handcuffed: false
       };
     }
 
-    start() {
-      this.setLevelHealth();
-      this.distributeItems();
-      this.addEvent("Welcome to the room. Three levels. One way out.");
-      this.reload();
-      this.mode = "action";
-      this.render();
-    }
-
-    setLevelHealth() {
-      const health = LEVEL_HEALTH[this.level - 1];
-      for (const entity of [this.player, this.dealer]) {
-        entity.health = health;
-        entity.maxHealth = health;
-      }
-    }
-
-    distributeItems() {
-      const count = ITEMS_PER_LEVEL[this.level - 1];
-      for (const entity of [this.player, this.dealer]) {
-        const available = [...ITEM_PRIORITY];
-        entity.inventory = [];
-        for (let i = 0; i < count; i += 1) {
-          const weights = available.map((_, index) => ITEM_PRIORITY.length - ITEM_PRIORITY.indexOf(available[index]));
-          const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-          let roll = Math.random() * totalWeight;
-          let selectedIndex = 0;
-          for (let j = 0; j < weights.length; j += 1) {
-            roll -= weights[j];
-            if (roll < 0) {
-              selectedIndex = j;
-              break;
-            }
-          }
-          entity.inventory.push(available.splice(selectedIndex, 1)[0]);
-        }
-      }
-    }
-
-    reload() {
-      this.reloadNumber += 1;
-      const total = 2 + Math.floor(Math.random() * 7);
-      let live = Math.floor(total / 2);
-      let blank = Math.floor(total / 2);
-      if (total % 2 === 1) {
-        if (Math.random() < 0.5) live += 1;
-        else blank += 1;
-      }
-      this.chamber = [...Array(live).fill("live"), ...Array(blank).fill("blank")];
-      this.shuffle(this.chamber);
-      this.isSawedOff = false;
-      this.addEvent(`Level ${this.level}, reload ${this.reloadNumber}: ${total} shells (${live} live, ${blank} blank).`);
-    }
-
-    shuffle(values) {
-      for (let i = values.length - 1; i > 0; i -= 1) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [values[i], values[j]] = [values[j], values[i]];
-      }
+    entityKey(entity) {
+      return entity === this.player ? "player" : "dealer";
     }
 
     addEvent(message) {
       this.events.push(message);
-      if (this.events.length > 10) this.events.shift();
+      if (this.events.length > 12) this.events.shift();
     }
 
-    submit(rawCommand) {
-      const command = rawCommand.trim();
+    escape(value) {
+      return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;").replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    submit(raw) {
+      const command = String(raw).trim().toLowerCase();
       if (this.mode === "start") {
-        this.start();
+        if (command === "2" && !this.doubleUnlocked) {
+          this.addEvent("Double or Nothing is locked. Win Story Mode once to unlock it.");
+          this.render();
+          return;
+        }
+        this.start(command === "2" ? "double" : "story");
         return;
       }
       if (this.mode === "restart") {
-        if (command.toLowerCase() === "r" || command === "") {
-          window.location.reload();
-        } else {
-          this.addEvent("Enter R to play again.");
-          this.render();
-        }
+        if (command === "r" || command === "") this.reset();
+        else this.addEvent("Enter R to start a new game.");
+        this.render();
+        return;
+      }
+      if (this.mode === "cashout") {
+        if (command === "1" || command === "y") this.startNextSet();
+        else if (command === "2" || command === "n" || command === "") this.finishDoubleRun();
+        else this.addEvent("Choose 1 to double down or 2 to cash out.");
+        this.render();
         return;
       }
       if (this.mode === "item") {
         this.selectItem(command);
         return;
       }
-      if (this.mode !== "action" || this.busy) return;
-      if (command === "1") {
-        this.fireAtOpponent();
-      } else if (command === "2") {
-        this.fireAtSelf();
-      } else if (command === "3") {
-        this.openInventory();
-      } else {
-        this.addEvent("Choose 1, 2, or 3.");
+      if (this.mode === "steal") {
+        this.handleSteal(command);
+        return;
       }
-      this.finishAction();
+      if (this.mode !== "action" || this.busy || this.current !== this.player) return;
+
+      if (command === "1") this.shoot(this.player, this.dealer);
+      else if (command === "2") this.shoot(this.player, this.player);
+      else if (command === "3") this.openInventory();
+      else this.addEvent("Choose 1, 2, or 3.");
+      this.afterPlayerCommand();
+    }
+
+    loadDoubleOrNothingUnlock() {
+      try {
+        return window.localStorage?.getItem("buckshot-browser.double-or-nothing-unlocked") === "true";
+      } catch {
+        return false;
+      }
+    }
+
+    unlockDoubleOrNothing() {
+      this.doubleUnlocked = true;
+      try {
+        window.localStorage?.setItem("buckshot-browser.double-or-nothing-unlocked", "true");
+      } catch {
+        // The unlock remains available for this session if storage is blocked.
+      }
+    }
+
+    start(mode) {
+      this.gameMode = mode;
+      this.stage = 1;
+      this.setNumber = 1;
+      this.winnings = 0;
+      this.storyPenalty = 0;
+      this.cigarettesUsed = 0;
+      this.beersUsed = 0;
+      this.results = [];
+      this.events = [];
+      this.gameOver = false;
+      this.setStartedAt = Date.now();
+      this.beginStage(true);
+    }
+
+    reset() {
+      if (this.timer) clearTimeout(this.timer);
+      if (this.stealTimer) window.clearTimeout(this.stealTimer);
+      this.timer = null;
+      this.stealTimer = null;
+      this.player = this.makeEntity("Player");
+      this.dealer = this.makeEntity("Dealer");
+      this.current = this.player;
+      this.opponent = this.dealer;
+      this.reloadNumber = 0;
+      this.stageReloads = 0;
+      this.chamber = [];
+      this.events = [];
+      this.results = [];
+      this.gameOver = false;
+      this.busy = false;
+      this.mode = "start";
+      this.render();
+    }
+
+    beginStage(firstStage = false) {
+      this.stageReloads = 0;
+      this.reloadNumber = 0;
+      this.chamber = [];
+      this.isSawedOff = false;
+      this.knownShell = { player: null, dealer: null };
+      this.futureKnowledge = { player: {}, dealer: {} };
+      const sharedHealth = this.gameMode === "story" ? (this.stage === 1 ? 2 : 4) : randomInt(2, 4);
+      for (const entity of [this.player, this.dealer]) {
+        entity.inventory = [];
+        entity.handcuffed = false;
+        entity.cutWire = false;
+        entity.dead = false;
+        entity.maxHealth = sharedHealth;
+        entity.health = sharedHealth;
+        entity.fadedHealth = this.gameMode === "story" && this.stage === 3 ? 2 : 0;
+      }
+      this.current = this.player;
+      this.opponent = this.dealer;
+      this.addEvent(firstStage
+        ? (this.gameMode === "story" ? "The Dealer welcomes you. Story Mode." : "You swallow the pills. Double or Nothing.")
+        : `Stage ${this.stage} begins.`);
+      this.mode = "action";
+      this.reload();
+      this.render();
+    }
+
+    itemCountForReload() {
+      if (this.gameMode === "double") return randomInt(1, 5);
+      if (this.stage === 1) return 0;
+      return this.stage === 2 ? 2 : 4;
+    }
+
+    distributeItems() {
+      const count = this.itemCountForReload();
+      const pool = this.gameMode === "story" ? BASE_ITEMS : ALL_ITEMS;
+      for (const entity of [this.player, this.dealer]) {
+        for (let i = 0; i < count && entity.inventory.length < 8; i++) entity.inventory.push(pick(pool));
+      }
+      if (count) this.addEvent(`Both sides receive up to ${count} item(s), subject to the 8-slot limit.`);
+    }
+
+    reload() {
+      this.reloadNumber += 1;
+      this.stageReloads += 1;
+      let shells;
+
+      if (this.gameMode === "story" && this.stage === 1) {
+        const preset = this.stageReloads === 1
+          ? ["live", "blank", "blank"]
+          : ["live", "live", "live", "blank", "blank"];
+        shells = [...preset];
+      } else if (this.gameMode === "story" && this.stage === 2 && this.stageReloads === 1) {
+        shells = ["live", "blank"];
+      } else {
+        const total = randomInt(2, 8);
+        let live = Math.floor(total / 2);
+        let blank = Math.floor(total / 2);
+        if (total % 2) {
+          if (Math.random() < 0.5) live++;
+          else blank++;
+        }
+        shells = [...Array(live).fill("live"), ...Array(blank).fill("blank")];
+      }
+
+      this.shuffle(shells);
+      this.chamber = shells;
+      this.liveRemaining = shells.filter((s) => s === "live").length;
+      this.blankRemaining = shells.length - this.liveRemaining;
+      this.isSawedOff = false;
+      // A fresh magazine clears any unused handcuff effect.
+      this.player.handcuffed = false;
+      this.dealer.handcuffed = false;
+      this.knownShell = { player: null, dealer: null };
+      this.futureKnowledge = { player: {}, dealer: {} };
+      this.distributeItems();
+      this.addEvent(`Reload ${this.reloadNumber}: ${shells.length} shells (${this.liveRemaining} live, ${this.blankRemaining} blank).`);
+      this.current = this.player;
+      this.opponent = this.dealer;
+      this.mode = "action";
+    }
+
+    shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    inferCurrentShell() {
+      if (this.liveRemaining === 0) return "blank";
+      if (this.blankRemaining === 0) return "live";
+      return null;
+    }
+
+    currentKnowledge(entity) {
+      const key = this.entityKey(entity);
+      if (this.knownShell[key]) return this.knownShell[key];
+      if (this.futureKnowledge[key][0]) return this.futureKnowledge[key][0];
+      let live = this.liveRemaining;
+      let blank = this.blankRemaining;
+      for (const [position, shell] of Object.entries(this.futureKnowledge[key])) {
+        if (Number(position) <= 0) continue;
+        if (shell === "live") live--;
+        else blank--;
+      }
+      if (live === 0) return "blank";
+      if (blank === 0) return "live";
+      return null;
+    }
+
+    drawShell() {
+      const shell = this.chamber.shift();
+      if (!shell) return null;
+      if (shell === "live") this.liveRemaining--;
+      else this.blankRemaining--;
+      for (const key of ["player", "dealer"]) {
+        const shifted = {};
+        for (const [position, known] of Object.entries(this.futureKnowledge[key])) {
+          const next = Number(position) - 1;
+          if (next >= 0) shifted[next] = known;
+        }
+        this.futureKnowledge[key] = shifted;
+      }
+      this.knownShell = { player: null, dealer: null };
+      return shell;
+    }
+
+    shoot(shooter, target) {
+      if (this.chamber.length === 0) this.reload();
+      const shell = this.drawShell();
+      const damage = this.isSawedOff ? 2 : 1;
+      this.isSawedOff = false;
+
+      if (shell === "live") {
+        this.damage(target, damage);
+        this.addEvent(`${shooter.name} fires a LIVE shell at ${target.name}: ${damage} damage.`);
+        this.passTurn(shooter);
+      } else {
+        this.addEvent(`${shooter.name} fires a BLANK shell at ${target.name}.`);
+        if (target !== shooter) this.passTurn(shooter);
+        else this.addEvent(`${shooter.name} keeps the turn.`);
+      }
+      this.resolveAfterShot();
+    }
+
+    damage(entity, amount) {
+      for (let i = 0; i < amount; i++) {
+        if (this.gameMode === "story" && this.stage === 3 && entity.cutWire) {
+          entity.dead = true;
+        } else if (entity.health > 0) {
+          entity.health--;
+          if (this.gameMode === "story" && this.stage === 3 && entity.health === 0) entity.cutWire = true;
+        } else {
+          entity.dead = true;
+        }
+      }
+    }
+
+    heal(entity, amount) {
+      if (entity.cutWire || entity.dead) return 0;
+      const healed = Math.min(amount, entity.maxHealth - entity.health);
+      entity.health += healed;
+      return healed;
+    }
+
+    passTurn(shooter) {
+      this.current = shooter === this.player ? this.dealer : this.player;
+      this.opponent = shooter;
+      this.applyCuffSkip();
+    }
+
+    applyCuffSkip() {
+      if (!this.current.handcuffed) return;
+      const skipped = this.current;
+      skipped.handcuffed = false;
+      this.addEvent(`${skipped.name} loses this turn because of the handcuffs.`);
+      this.current = skipped === this.player ? this.dealer : this.player;
+      this.opponent = skipped;
+    }
+
+    resolveAfterShot() {
+      if (this.checkStageEnd()) return;
+      if (this.chamber.length === 0) {
+        if (this.gameMode === "story" && this.stage === 1 && this.stageReloads >= 2) {
+          this.advanceStage();
+          return;
+        }
+        this.reload();
+      }
+    }
+
+    calculateTimedPayout(elapsedSeconds) {
+      return Math.max(10, Math.floor(70000 - (elapsedSeconds * 200 / 3)));
+    }
+
+    checkStageEnd() {
+      const playerDead = this.player.dead || (this.player.health <= 0 && (this.gameMode === "double" || this.stage < 3));
+      const dealerDead = this.dealer.dead || (this.dealer.health <= 0 && (this.gameMode === "double" || this.stage < 3));
+      if (!playerDead && !dealerDead) return false;
+
+      const playerWon = !playerDead && dealerDead;
+      this.results.push(`Stage ${this.stage}: ${playerWon ? "Player" : "Dealer"} wins`);
+      this.addEvent(`Stage ${this.stage} ends. ${playerWon ? "You win." : "The Dealer wins."}`);
+
+      if (this.gameMode === "story") {
+        if (this.stage < 3) {
+          if (!playerWon) this.storyPenalty += this.stage === 1 ? 4000 : (this.stage === 2 && this.storyPenalty === 0 ? 4000 : 2000);
+          this.advanceStage();
+        } else if (playerWon) {
+          this.gameOver = true;
+          this.mode = "restart";
+          this.unlockDoubleOrNothing();
+          this.addEvent("You survived Story Mode. The briefcase is yours.");
+          this.addEvent(`Final Story Mode cash: ${this.storyCash().toLocaleString()}.`);
+        } else {
+          this.gameOver = true;
+          this.mode = "restart";
+          this.addEvent("The Dealer wins. You did not survive the final stage.");
+          this.addEvent(`Final Story Mode cash: ${this.storyCash().toLocaleString()}.`);
+        }
+      } else if (!playerWon) {
+        this.gameOver = true;
+        this.mode = "restart";
+        this.winnings = 0;
+        this.addEvent("Run over. Double or Nothing pays nothing when you lose.");
+      } else if (this.stage < 3) {
+        this.advanceStage();
+      } else {
+        if (this.setNumber === 1) {
+          const elapsedSeconds = (Date.now() - this.setStartedAt) / 1000;
+          this.winnings = this.calculateTimedPayout(elapsedSeconds);
+          this.addEvent(`Initial set cleared. Your starting payout is ${this.winnings.toLocaleString()}.`);
+        } else {
+          this.winnings *= 2;
+          this.addEvent(`Double successful. Your running payout is now ${this.winnings.toLocaleString()}.`);
+        }
+        this.mode = "cashout";
+      }
+      this.render();
+      return true;
+    }
+
+    advanceStage() {
+      this.stage += 1;
+      if (this.stage > 3) {
+        this.stage = 3;
+        this.mode = "cashout";
+        this.render();
+        return;
+      }
+      this.beginStage();
+    }
+
+    startNextSet() {
+      this.setNumber += 1;
+      this.stage = 1;
+      this.player = this.makeEntity("Player");
+      this.dealer = this.makeEntity("Dealer");
+      this.current = this.player;
+      this.opponent = this.dealer;
+      this.beginStage();
+    }
+
+    storyCash() {
+      return Math.max(0, 70000 - this.storyPenalty - this.cigarettesUsed * 220 - this.beersUsed * 495);
+    }
+
+    finishDoubleRun() {
+      this.gameOver = true;
+      this.mode = "restart";
+      this.addEvent(`You cash out with $${this.winnings.toLocaleString()}.`);
+      this.render();
     }
 
     openInventory() {
-      if (this.player.inventory.length === 0) {
-        this.addEvent("Your pockets are empty.");
+      if (!this.player.inventory.length) {
+        this.addEvent("Your inventory is empty.");
         return;
       }
       this.mode = "item";
-      this.addEvent("Choose an item (enter 0 to go back):");
-      this.player.inventory.forEach((item, index) => {
-        this.addEvent(`${index + 1}. ${item}`);
-      });
+      this.addEvent("Choose an item number (0 to return):");
+      this.player.inventory.forEach((item, i) => this.addEvent(`${i + 1}. ${item}`));
     }
 
     selectItem(command) {
       if (command === "0") {
         this.mode = "action";
-      } else if (/^\d+$/.test(command)) {
-        const item = this.player.inventory[Number(command) - 1];
-        if (!item) {
-          this.addEvent("Enter a listed item number, or 0 to go back.");
-        } else {
-          const result = this.useItem(this.player, item);
-          if (result === "select") {
-            this.render();
-            return;
-          }
-          if (result) {
-            this.addEvent(`${item} used.`);
-            this.mode = "action";
-            this.checkLevelEnd();
-            if (this.gameOver) this.mode = "restart";
-          }
-        }
-      } else {
-        this.addEvent("Enter a listed item number, or 0 to go back.");
+        this.render();
+        return;
+      }
+      const index = Number(command) - 1;
+      if (!Number.isInteger(index) || index < 0 || index >= this.player.inventory.length) {
+        this.addEvent("Choose a listed item, or 0 to return.");
+        this.render();
+        return;
+      }
+      const item = this.player.inventory[index];
+      const result = this.useItem(this.player, item);
+      if (result === "steal") {
+        this.mode = "steal";
+      } else if (result) {
+        this.consumeItem(this.player, item);
+        this.mode = "action";
+        this.checkStageEnd();
       }
       this.render();
-    }
-
-    finishAction() {
-      if (this.gameOver) {
-        this.mode = "restart";
-        this.render();
-        return;
-      }
-      if (this.mode === "action") this.checkLevelEnd();
-      if (this.gameOver) {
-        this.mode = "restart";
-        this.render();
-        return;
-      }
-      if (this.chamber.length === 0) this.reload();
-      if (this.current === this.dealer) {
-        this.runDealerTurn();
-      } else {
-        this.render();
-      }
-    }
-
-    fireAtOpponent() {
-      const shooter = this.current;
-      const target = this.opponent;
-      const shell = this.takeShell();
-      const damage = this.damageForShot();
-      if (shell === "live") {
-        target.health = Math.max(0, target.health - damage);
-        this.addEvent(`${shooter.name} fires at ${target.name}. The live shell deals ${damage} damage.`);
-      } else {
-        this.addEvent(`${shooter.name} fires a blank at ${target.name}.`);
-      }
-      this.switchTurn();
-    }
-
-    fireAtSelf() {
-      const shooter = this.current;
-      const shell = this.takeShell();
-      const damage = this.damageForShot();
-      if (shell === "live") {
-        shooter.health = Math.max(0, shooter.health - damage);
-        this.addEvent(`${shooter.name} fires at themselves. The live shell deals ${damage} damage.`);
-        this.switchTurn();
-      } else {
-        this.addEvent(`${shooter.name} fires a blank at themselves.`);
-        this.addEvent(`${shooter.name} keeps the turn.`);
-      }
-    }
-
-    takeShell() {
-      if (this.chamber.length === 0) this.reload();
-      return this.chamber.shift();
-    }
-
-    damageForShot() {
-      if (this.isSawedOff) {
-        this.isSawedOff = false;
-        return 2;
-      }
-      return 1;
-    }
-
-    switchTurn() {
-      [this.current, this.opponent] = [this.opponent, this.current];
-      if (this.current.isHandcuffed) {
-        this.current.isHandcuffed = false;
-        this.addEvent(`${this.current.name} skips their turn due to handcuffs.`);
-        [this.current, this.opponent] = [this.opponent, this.current];
-      }
-    }
-
-    useItem(owner, item) {
-      const opponent = owner === this.player ? this.dealer : this.player;
-      let used = true;
-      switch (item) {
-        case "Magnifying Glass":
-          if (this.chamber.length === 0) this.reload();
-          this.addEvent(`You peer into the chamber... It's a ${this.chamber[0].toUpperCase()} shell.`);
-          break;
-        case "Hand Saw":
-          if (this.isSawedOff) {
-            this.addEvent("The barrel is already sawed off.");
-            used = false;
-          } else {
-            this.isSawedOff = true;
-            this.addEvent("You saw off the barrel! The next shot will deal double damage.");
-          }
-          break;
-        case "Handcuffs":
-          if (opponent.isHandcuffed) {
-            this.addEvent("They are already handcuffed for the next turn.");
-            used = false;
-          } else {
-            opponent.isHandcuffed = true;
-            this.addEvent(`${opponent.name} is cuffed! They will skip their next turn.`);
-          }
-          break;
-        case "Cigarette Pack":
-          if (owner.health >= owner.maxHealth) {
-            this.addEvent("Health is already full.");
-            used = false;
-          } else {
-            owner.health += 1;
-            this.addEvent(`${owner.name} restored 1 health point (${owner.health}/${owner.maxHealth}).`);
-          }
-          break;
-        case "Beer": {
-          if (this.chamber.length === 0) this.reload();
-          const ejected = this.chamber.shift();
-          this.addEvent(`You rack the gun. A ${ejected.toUpperCase()} shell flies out.`);
-          if (this.chamber.length === 0) this.reload();
-          break;
-        }
-        case "Adrenaline":
-          used = this.useAdrenaline(owner, opponent);
-          break;
-        case "Inverter":
-          if (this.chamber.length === 0) this.reload();
-          this.chamber[0] = this.chamber[0] === "live" ? "blank" : "live";
-          this.addEvent("The Inverter flips the current shell's polarity.");
-          break;
-        case "Burner Phone":
-          if (this.chamber.length <= 1) {
-            this.addEvent("Too late to change the future. Only one shell remains.");
-          } else {
-            const index = 1 + Math.floor(Math.random() * (this.chamber.length - 1));
-            this.addEvent(`A mysterious voice whispers: shell number ${index + 1} is ${this.chamber[index].toUpperCase()}.`);
-          }
-          break;
-        case "Expired Medicine":
-          if (Math.random() < 0.45) {
-            const healed = Math.min(2, owner.maxHealth - owner.health);
-            owner.health += healed;
-            this.addEvent(`High risk paid off! Restored ${healed} health point(s).`);
-          } else {
-            owner.health = Math.max(0, owner.health - 1);
-            this.addEvent("The medicine backfires. You lost 1 health.");
-          }
-          break;
-        default:
-          this.addEvent("That item is not available.");
-          used = false;
-      }
-      if (used && (item !== "Adrenaline" || owner === this.dealer)) {
-        const index = owner.inventory.indexOf(item);
-        if (index !== -1) owner.inventory.splice(index, 1);
-      }
-      return used;
-    }
-
-    useAdrenaline(owner, opponent) {
-      const stealable = opponent.inventory.filter((item) => item !== "Adrenaline");
-      if (stealable.length === 0) {
-        this.addEvent("Adrenaline rush, but the opponent has no items to steal!");
-        return false;
-      }
-
-      let stolen;
-      if (owner === this.player) {
-        this.mode = "steal";
-        this.stealableItems = stealable;
-        this.addEvent("Choose an item to steal:");
-        stealable.forEach((item, index) => this.addEvent(`${index + 1}. ${item}`));
-        return "select";
-      }
-      stolen = stealable[Math.floor(Math.random() * stealable.length)];
-      return this.stealAndUse(owner, opponent, stolen);
-    }
-
-    stealAndUse(owner, opponent, stolen) {
-      const opponentIndex = opponent.inventory.indexOf(stolen);
-      if (opponentIndex === -1) return false;
-      opponent.inventory.splice(opponentIndex, 1);
-      this.addEvent(`Stole ${stolen} and use it immediately.`);
-      if (this.useItem(owner, stolen)) return true;
-      opponent.inventory.push(stolen);
-      return false;
     }
 
     handleSteal(command) {
-      if (/^\d+$/.test(command)) {
-        const item = this.stealableItems[Number(command) - 1];
-        if (item) {
-          const success = this.stealAndUse(this.player, this.dealer, item);
-          if (success) {
-            this.player.inventory.splice(this.player.inventory.indexOf("Adrenaline"), 1);
-            this.addEvent("Adrenaline used.");
-            this.mode = "action";
-            this.checkLevelEnd();
-          } else {
-            this.mode = "action";
-          }
-        } else {
-          this.addEvent("Enter a listed item number.");
-        }
-      } else {
-        this.addEvent("Enter a listed item number.");
+      const index = Number(command) - 1;
+      const item = this.stealableItems[index];
+      if (!item) {
+        this.addEvent("Choose a listed item to steal.");
+        this.render();
+        return;
       }
+      if (this.stealTimer) window.clearTimeout(this.stealTimer);
+      this.stealTimer = null;
+      const owner = this.stealOwner;
+      const victim = owner === this.player ? this.dealer : this.player;
+      const victimIndex = victim.inventory.indexOf(item);
+      if (victimIndex < 0) {
+        this.mode = "action";
+        this.render();
+        return;
+      }
+      victim.inventory.splice(victimIndex, 1);
+      this.addEvent(`${owner.name} steals ${item} and uses it immediately.`);
+      const success = this.useItem(owner, item, true);
+      if (!success) victim.inventory.push(item);
+      else this.consumeItem(owner, "Adrenaline");
+      this.stealableItems = [];
+      this.stealOwner = null;
+      this.mode = "action";
+      this.checkStageEnd();
       this.render();
     }
 
-    checkLevelEnd() {
-      if (this.player.health > 0 && this.dealer.health > 0) return;
-      const winner = this.player.health <= 0 ? this.dealer : this.player;
-      const result = `${winner.name} won level ${this.level}`;
-      this.results.push(result);
-      this.addEvent(result);
+    consumeItem(owner, item) {
+      const index = owner.inventory.indexOf(item);
+      if (index >= 0) owner.inventory.splice(index, 1);
+    }
 
-      if (this.level === LEVEL_HEALTH.length) {
-        this.gameOver = true;
-        this.addEvent(`${winner.name} wins.`);
-        return;
+    expireAdrenaline() {
+      if (this.mode !== "steal" || this.stealOwner !== this.player) return;
+      this.stealTimer = null;
+      this.consumeItem(this.player, "Adrenaline");
+      this.stealableItems = [];
+      this.stealOwner = null;
+      this.mode = "action";
+      this.addEvent("Adrenaline expired. No item was stolen.");
+      this.afterPlayerCommand();
+    }
+
+    useItem(owner, item, stolen = false) {
+      const other = owner === this.player ? this.dealer : this.player;
+      const key = this.entityKey(owner);
+      if (this.chamber.length === 0 && ["Magnifying Glass", "Beer", "Inverter", "Burner Phone"].includes(item)) {
+        this.addEvent("There is no shell to interact with.");
+        return false;
       }
 
-      this.level += 1;
-      this.setLevelHealth();
-      for (const entity of [this.player, this.dealer]) {
-        entity.isHandcuffed = false;
-        entity.inventory = [];
+      switch (item) {
+        case "Magnifying Glass": {
+          const shell = this.currentKnowledge(owner) || this.chamber[0];
+          this.knownShell[key] = shell;
+          this.addEvent(`${owner.name} checks the chamber: ${shell.toUpperCase()}.`);
+          return true;
+        }
+        case "Handcuffs":
+          if (other.handcuffed) return false;
+          other.handcuffed = true;
+          this.addEvent(`${other.name} is handcuffed and will miss their next turn.`);
+          return true;
+        case "Beer": {
+          const ejected = this.drawShell();
+          if (owner === this.player) this.beersUsed++;
+          this.isSawedOff = false;
+          this.addEvent(`${owner.name} racks the shotgun and ejects a ${ejected.toUpperCase()} shell.`);
+          if (!this.chamber.length) this.reload();
+          return true;
+        }
+        case "Cigarette Pack": {
+          if (owner === this.player) this.cigarettesUsed++;
+          const healed = this.heal(owner, 1);
+          this.addEvent(healed ? `${owner.name} restores 1 charge.` : `${owner.name} is already at maximum normal health.`);
+          return true;
+        }
+        case "Hand Saw":
+          if (this.isSawedOff) return false;
+          this.isSawedOff = true;
+          this.addEvent(`${owner.name} saws off the barrel. The next live shot deals 2 damage.`);
+          return true;
+        case "Inverter": {
+          const flipped = this.chamber[0] === "live" ? "blank" : "live";
+          this.chamber[0] = flipped;
+          if (flipped === "live") { this.liveRemaining++; this.blankRemaining--; }
+          else { this.liveRemaining--; this.blankRemaining++; }
+          // Preserve any information already held about this exact shell.
+          // The user of the inverter also knows what they changed it into.
+          for (const participant of ["player", "dealer"]) {
+            if (this.knownShell[participant]) this.knownShell[participant] = flipped;
+            if (this.futureKnowledge[participant][0]) this.futureKnowledge[participant][0] = flipped;
+          }
+          this.knownShell[key] = flipped;
+          this.addEvent(`${owner.name} inverts the current shell to ${flipped.toUpperCase()}.`);
+          return true;
+        }
+        case "Burner Phone": {
+          if (this.chamber.length < 2) return false;
+          const index = randomInt(1, this.chamber.length - 1);
+          const future = this.chamber[index];
+          this.futureKnowledge[key][index] = future;
+          this.addEvent(`The Burner Phone reveals shell ${index + 1}: ${future.toUpperCase()}.`);
+          return true;
+        }
+        case "Expired Medicine": {
+          if (Math.random() < 0.5) {
+            const healed = this.heal(owner, 2);
+            this.addEvent(`Medicine works: ${healed} charge(s) restored.`);
+          } else {
+            this.damage(owner, 1);
+            this.addEvent("Medicine backfires: you lose 1 charge.");
+          }
+          return true;
+        }
+        case "Adrenaline": {
+          const candidates = other.inventory.filter((candidate) =>
+            candidate !== "Adrenaline" &&
+            !(candidate === "Handcuffs" && other.handcuffed) &&
+            !(candidate === "Hand Saw" && this.isSawedOff) &&
+            !(candidate === "Burner Phone" && this.chamber.length < 2)
+          );
+          if (!candidates.length) return false;
+          if (owner === this.player && !stolen) {
+            this.stealableItems = candidates;
+            this.stealOwner = owner;
+            this.addEvent("Choose an opponent item to steal within 5 seconds:");
+            candidates.forEach((candidate, i) => this.addEvent(`${i + 1}. ${candidate}`));
+            this.stealTimer = window.setTimeout(() => this.expireAdrenaline(), 5000);
+            return "steal";
+          }
+          const chosen = this.chooseDealerSteal(candidates);
+          const victimIndex = other.inventory.indexOf(chosen);
+          other.inventory.splice(victimIndex, 1);
+          this.addEvent(`${owner.name} steals ${chosen} and uses it.`);
+          const success = this.useItem(owner, chosen, true);
+          if (!success) other.inventory.push(chosen);
+          return success;
+        }
+        default:
+          return false;
       }
-      this.chamber = [];
-      this.isSawedOff = false;
-      this.current = this.player;
-      this.opponent = this.dealer;
-      this.distributeItems();
-      this.addEvent(`Starting Level ${this.level}.`);
-      this.reload();
+    }
+
+    chooseDealerSteal(candidates) {
+      const order = ["Handcuffs", "Hand Saw", "Cigarette Pack", "Magnifying Glass", "Inverter", "Beer", "Burner Phone", "Expired Medicine"];
+      return order.find((item) => candidates.includes(item)) || pick(candidates);
+    }
+
+    dealerUseItems() {
+      // The dealer only uses its own inventory and information it has acquired.
+      let guard = 0;
+      while (this.dealer.inventory.length && guard++ < 8) {
+        const item = this.chooseDealerItem();
+        if (!item) break;
+        const result = this.useItem(this.dealer, item);
+        if (result === "steal") break;
+        if (result) this.consumeItem(this.dealer, item);
+        if (this.checkStageEnd()) return;
+        // A Beer/Adrenaline effect can empty the magazine and trigger a reload.
+        // The player owns the first action of every fresh magazine.
+        if (this.current !== this.dealer) return;
+      }
+    }
+
+    chooseDealerItem() {
+      const inventory = this.dealer.inventory;
+      const known = this.currentKnowledge(this.dealer);
+      if (inventory.includes("Cigarette Pack") && !this.dealer.cutWire &&
+          this.dealer.health < this.dealer.maxHealth) return "Cigarette Pack";
+      if (inventory.includes("Handcuffs") && !this.player.handcuffed) return "Handcuffs";
+      if (inventory.includes("Adrenaline") && this.player.inventory.some((i) => i !== "Adrenaline")) return "Adrenaline";
+      if (inventory.includes("Magnifying Glass") && !known && this.liveRemaining && this.blankRemaining) return "Magnifying Glass";
+      if (inventory.includes("Burner Phone") && this.chamber.length > 1) return "Burner Phone";
+      if (inventory.includes("Hand Saw") && !this.isSawedOff &&
+          (known === "live" || (!known && this.liveRemaining > this.blankRemaining))) return "Hand Saw";
+      if (inventory.includes("Inverter") && known === "blank" && this.chamber.length) return "Inverter";
+      if (inventory.includes("Beer") && known === "blank" && this.chamber.length > 1) return "Beer";
+      if (inventory.includes("Expired Medicine") && !this.dealer.cutWire &&
+          this.dealer.health > 1 && this.dealer.health <= this.dealer.maxHealth - 2) return "Expired Medicine";
+      return null;
     }
 
     runDealerTurn() {
-      if (this.dealer.isHandcuffed) {
-        this.dealer.isHandcuffed = false;
-        this.addEvent("Dealer skips their turn due to handcuffs.");
+      if (this.gameOver || this.current !== this.dealer) {
+        this.render();
+        return;
+      }
+      if (this.dealer.handcuffed) {
+        this.dealer.handcuffed = false;
+        this.addEvent("The Dealer loses a turn because of the handcuffs.");
         this.current = this.player;
         this.opponent = this.dealer;
         this.render();
@@ -432,144 +689,99 @@
       }
       this.busy = true;
       this.mode = "waiting";
-      this.addEvent("Dealer is thinking...");
+      this.addEvent("The Dealer is thinking...");
       this.render();
-      window.setTimeout(() => {
+      this.timer = window.setTimeout(() => {
+        this.timer = null;
         if (this.gameOver) return;
         this.mode = "action";
-        this.dealerTurn();
-        this.busy = false;
-        this.checkLevelEnd();
-        if (!this.gameOver && this.chamber.length === 0) this.reload();
+        this.dealerUseItems();
         if (!this.gameOver && this.current === this.dealer) {
-          this.runDealerTurn();
-        } else {
-          this.render();
+          const known = this.currentKnowledge(this.dealer);
+          const shell = known || (this.liveRemaining === 0 ? "blank" : this.blankRemaining === 0 ? "live" : null);
+          let target;
+          if (shell === "blank") target = this.dealer;
+          else if (shell === "live") target = this.player;
+          else target = this.liveRemaining > this.blankRemaining ? this.player : this.dealer;
+          this.shoot(this.dealer, target);
         }
+        this.busy = false;
+        if (!this.gameOver && this.current === this.dealer) this.runDealerTurn();
+        else this.render();
       }, DEALER_DELAY_MS);
     }
 
-    dealerTurn() {
-      if (this.dealer.isHandcuffed) {
-        this.dealer.isHandcuffed = false;
-        this.addEvent("Dealer skips their turn due to handcuffs.");
-        this.current = this.player;
-        this.opponent = this.dealer;
+    afterPlayerCommand() {
+      if (this.mode === "item" || this.mode === "steal") {
+        this.render();
         return;
       }
-
-      const item = this.chooseDealerItem();
-      if (item) this.useItem(this.dealer, item);
-      if (this.dealer.health <= 0 || this.player.health <= 0) return;
-
-      const target = this.chamber[0] === "blank"
-        ? "self"
-        : this.chamber[0] === "live"
-          ? "opponent"
-          : (Math.random() < 0.5 ? "self" : "opponent");
-      if (target === "self") {
-        this.current = this.dealer;
-        this.opponent = this.player;
-        this.fireAtSelf();
-      } else {
-        this.current = this.dealer;
-        this.opponent = this.player;
-        this.fireAtOpponent();
-      }
-    }
-
-    chooseDealerItem() {
-      for (const item of this.dealer.inventory) {
-        if (item === "Cigarette Pack" && this.dealer.health < this.dealer.maxHealth) return item;
-        if (item === "Hand Saw" && this.chamber.includes("live")) return item;
-        if (item === "Handcuffs" && !this.player.isHandcuffed) return item;
-        if (item === "Magnifying Glass") return item;
-        if (item === "Inverter") return item;
-      }
-      return null;
+      if (this.checkStageEnd()) return;
+      if (this.current === this.dealer) this.runDealerTurn();
+      else this.render();
     }
 
     render() {
       if (this.mode === "start") {
         screen.innerHTML = [
-          '<span class="title">BUCKSHOT ROULETTE</span>',
+          '<span class="title">BUCKSHOT ROULETTE</span>', "",
+          "1. Story Mode",
+          this.doubleUnlocked ? "2. Double or Nothing" : "2. Double or Nothing (locked)",
           "",
-          "A terminal game of chance against the Dealer.",
-          "Three levels. Nine items. One way out.",
-          "",
-          '<span class="separator">---</span>',
+          this.doubleUnlocked
+            ? "Press Enter for Story Mode, or enter 2 for Double or Nothing."
+            : "Win Story Mode once to unlock Double or Nothing.",
+          "", '<span class="separator">---</span>'
         ].join("\n");
-        promptLabel.textContent = "Press Enter to begin:";
+        promptLabel.textContent = "Mode:";
         input.disabled = false;
         if (!input.readOnly) input.focus();
-        keypadButtons.forEach((button) => {
-          button.disabled = input.disabled;
-        });
+        keypadButtons.forEach((b) => b.disabled = false);
         return;
       }
 
+      const health = (entity) => entity.fadedHealth
+        ? `${entity.health} + ${entity.fadedHealth} cracked${entity.cutWire ? " (wire cut)" : ""}`
+        : String(entity.health);
       const lines = [
-        `<span class="title">==== Lev. ${this.level} / Rel. ${this.reloadNumber || 1} ====</span>`,
+        `<span class="title">==== ${this.gameMode === "story" ? "STORY" : "DOUBLE OR NOTHING"} | STAGE ${this.stage} | RELOAD ${this.reloadNumber} ====</span>`,
         "",
-        `${this.chamber.length} SHELLS ( ${this.chamber.filter((shell) => shell === "live").length}L / ${this.chamber.filter((shell) => shell === "blank").length}B )`,
+        `SHELLS: ${this.chamber.length} ( ${this.liveRemaining} LIVE / ${this.blankRemaining} BLANK )`,
+        `PLAYER: ${health(this.player)}`,
+        `DEALER: ${health(this.dealer)}`,
         "",
-        `PLAYER LIVES:  ${this.player.health}`,
-        `DEALER LIVES:  ${this.dealer.health}`,
+        `PLAYER ITEMS [${this.player.inventory.length}]: ${this.player.inventory.join(", ") || "none"}`,
+        `DEALER ITEMS [${this.dealer.inventory.length}]: ${this.dealer.inventory.join(", ") || "none"}`,
         "",
-        `PLAYER items [${this.player.inventory.length}] : ${this.player.inventory.join(", ") || "none"}`,
-        `DEALER items [${this.dealer.inventory.length}] : ${this.dealer.inventory.join(", ") || "none"}`,
-        "",
-        ...this.results.map((result) => `> ${this.escape(result)}`),
+        ...this.results.map((r) => `> ${this.escape(r)}`),
+        '<span class="separator">---</span>', ""
       ];
-      for (let i = this.results.length; i < 3; i += 1) lines.push(">");
-      lines.push('<span class="separator">---</span>', "");
 
-      if (!this.gameOver && this.mode !== "start" && this.mode !== "restart") {
-        lines.push("1. Shoot the Dealer", "2. Shoot Yourself", "3. Use an item", "");
+      if (this.mode === "cashout") {
+        lines.push(`RUNNING WINNINGS: $${this.winnings.toLocaleString()}`, "1. Double down", "2. Cash out");
+      } else if (this.mode === "restart") {
+        lines.push("GAME OVER", `FINAL CASH: ${(this.gameMode === "story" ? this.storyCash() : this.winnings).toLocaleString()}`, "Press R to restart.");
+      } else {
+        lines.push("1. Shoot the Dealer", "2. Shoot Yourself", "3. Use an item");
       }
-      lines.push('<span class="separator">---</span>', "");
-      if (!this.gameOver && this.mode !== "start" && this.mode !== "restart") {
-        lines.push(`<span class="status">(${this.current === this.player ? "P" : "Dealer"}'s Turn)</span>`);
+      lines.push("", '<span class="separator">---</span>', "");
+      if (this.mode !== "restart" && this.mode !== "cashout") {
+        lines.push(`<span class="status">(${this.current.name}'s turn)${this.busy ? " — waiting" : ""}</span>`);
       }
       lines.push("", '<span class="title">RECENT EVENTS:</span>');
       for (const event of this.events.slice(-8)) lines.push(`<span class="event">&gt; ${this.escape(event)}</span>`);
-      if (this.events.length === 0) lines.push('<span class="muted">&gt;</span>');
-      lines.push("", '<span class="separator">---</span>');
       screen.innerHTML = lines.join("\n");
       screen.scrollTop = screen.scrollHeight;
 
-      if (this.mode === "start") {
-        promptLabel.textContent = "Press Enter to begin:";
-        input.disabled = false;
-      } else if (this.mode === "item") {
-        promptLabel.textContent = "Item number:";
-        input.disabled = false;
-      } else if (this.mode === "steal") {
-        promptLabel.textContent = "Steal item number:";
-        input.disabled = false;
-      } else if (this.mode === "restart") {
-        promptLabel.textContent = "R to restart:";
-        input.disabled = false;
-      } else if (this.mode === "waiting") {
-        promptLabel.textContent = "Dealer:";
-        input.disabled = true;
-      } else {
-        promptLabel.textContent = "Select an action:";
-        input.disabled = false;
-      }
+      const prompts = {
+        item: "Item number:", steal: "Steal item number:",
+        waiting: "Dealer:", cashout: "Choose 1 or 2:",
+        restart: "R to restart:", action: "Select an action:"
+      };
+      promptLabel.textContent = prompts[this.mode] || "Command:";
+      input.disabled = this.mode === "waiting";
       if (!input.disabled && !input.readOnly) input.focus();
-      keypadButtons.forEach((button) => {
-        button.disabled = input.disabled;
-      });
-    }
-
-    escape(value) {
-      return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#39;");
+      keypadButtons.forEach((b) => b.disabled = input.disabled);
     }
   }
 
@@ -580,23 +792,23 @@
     event.preventDefault();
     const command = input.value;
     input.value = "";
-    if (game.mode === "steal") game.handleSteal(command.trim());
-    else game.submit(command);
+    game.submit(command);
   });
 
   keypad.addEventListener("click", (event) => {
     const button = event.target.closest("button");
     if (!button || button.disabled) return;
-
     const key = button.dataset.key;
-    if (key === "enter") {
-      form.requestSubmit();
-    } else if (key === "clear") {
-      input.value = "";
-    } else if (key === "backspace") {
-      input.value = input.value.slice(0, -1);
-    } else {
-      input.value += key;
-    }
+    if (key === "enter") form.requestSubmit();
+    else if (key === "clear") input.value = "";
+    else if (key === "backspace") input.value = input.value.slice(0, -1);
+    else input.value += key;
+  });
+
+  const media = window.matchMedia("(max-width: 640px), (pointer: coarse)");
+  input.readOnly = media.matches;
+  media.addEventListener("change", () => {
+    input.readOnly = media.matches;
+    if (input.readOnly && document.activeElement === input) input.blur();
   });
 })();
