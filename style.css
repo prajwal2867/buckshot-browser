@@ -11,8 +11,90 @@ body {
   padding: 12px;
 }
 
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 960px;
+  margin: 0 auto 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #333;
+}
+
+.site-brand, .eyebrow {
+  color: #aaa;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+}
+
+button, input {
+  font: inherit;
+}
+
+button {
+  border: 1px solid #777;
+  border-radius: 4px;
+  padding: 8px 12px;
+  background: #222;
+  color: inherit;
+  cursor: pointer;
+}
+
+button:hover { background: #333; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.multiplayer-panel {
+  box-sizing: border-box;
+  width: min(100%, 960px);
+  margin: 0 auto 20px;
+  padding: 18px;
+  border: 1px solid #555;
+  border-radius: 6px;
+  background: #171717;
+}
+
+.multiplayer-heading, .inline-controls, .identity-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.multiplayer-heading h1 { margin: 4px 0 14px; font-size: 1.25rem; }
+.multiplayer-heading p { margin: 0; }
+.quiet-button, .text-button { border: 0; background: transparent; }
+.text-button { padding: 2px 6px; font-size: 0.75rem; text-decoration: underline; }
+.multiplayer-panel label { display: block; margin: 10px 0 6px; font-size: 0.8rem; }
+.multiplayer-panel input {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  padding: 9px;
+  border: 1px solid #666;
+  border-radius: 4px;
+  background: #080808;
+  color: #fff;
+}
+.inline-controls input { flex: 1; }
+.help-text, .multiplayer-message { color: #aaa; font-size: 0.72rem; }
+.multiplayer-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 14px; }
+.multiplayer-actions > button { align-self: end; min-height: 42px; }
+.multiplayer-actions form { min-width: 0; }
+.multiplayer-actions form label { margin-top: 0; }
+.identity-line { justify-content: flex-start; color: #aaa; font-size: 0.8rem; }
+.identity-line strong { color: #fff; }
+.status-line { padding: 10px; background: #0d0d0d; border-left: 3px solid #888; font-size: 0.8rem; }
+.room-code { display: block; font-size: 2rem; letter-spacing: 0.3em; }
+.join-request { margin: 12px 0; padding: 12px; border: 1px solid #777; }
+.room-players { margin: 12px 0; font-size: 0.8rem; }
+.secondary-button { background: #111; }
+.multiplayer-message { min-height: 1em; margin-bottom: 0; }
+
 main {
   min-width: 0;
+  max-width: 960px;
+  margin: 0 auto;
 }
 
 #screen {
@@ -54,10 +136,7 @@ main {
   line-height: 1.2;
 }
 
-#command-form label {
-  flex: 0 0 auto;
-}
-
+#command-form label { flex: 0 0 auto; }
 #command-input {
   min-width: 0;
   flex: 1;
@@ -68,59 +147,24 @@ main {
   color: inherit;
   font: inherit;
 }
-
-#keypad {
-  display: none;
-}
+#keypad { display: none; }
 
 @media (max-width: 640px), (pointer: coarse) {
-  :root {
-    font-size: clamp(10px, 3vw, 14px);
-  }
-
+  :root { font-size: clamp(10px, 3vw, 14px); }
   body {
     box-sizing: border-box;
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
+    min-height: 100vh;
     padding: 8px;
   }
-
-  main {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-  }
-
-  #screen {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: none;
-  }
-
-  #screen::-webkit-scrollbar {
-    display: none;
-  }
-
-  #command-form {
-    flex: 0 0 auto;
-    min-height: 32px;
-  }
-
-  #command-input {
-    font-size: 16px;
-  }
-
+  .multiplayer-actions { grid-template-columns: 1fr; }
+  #command-form { min-height: 32px; }
+  #command-input { font-size: 16px; }
   #keypad {
     display: grid;
-    flex: 0 0 auto;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 5px;
     padding-top: 6px;
   }
-
   #keypad button {
     min-width: 0;
     min-height: 42px;
@@ -132,33 +176,11 @@ main {
     font-size: 16px;
     touch-action: manipulation;
   }
-
-  #keypad button:active {
-    background: #444;
-  }
-
-  #keypad button:disabled {
-    opacity: 0.45;
-  }
-
-  #keypad .enter-key {
-    grid-column: span 3;
-  }
+  #keypad button:active { background: #444; }
+  #keypad button:disabled { opacity: 0.45; }
+  #keypad .enter-key { grid-column: span 3; }
 }
 
-#screen .title {
-  font-weight: 700;
-  letter-spacing: 0.035em;
-}
-
-#screen .separator {
-  color: #777;
-}
-
-
-#screen .bankruptcy-title {
-  color: #ff5c5c;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
+#screen .title { font-weight: 700; letter-spacing: 0.035em; }
+#screen .separator { color: #777; }
+#screen .bankruptcy-title { color: #ff5c5c; font-weight: 700; letter-spacing: 0.06em; }
