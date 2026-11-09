@@ -36,7 +36,9 @@
       this.opponent = this.dealer;
       this.mode = "bet";
       this.gameMode = "story";
+      this.bankruptcyDeferred = false;
       this.balance = this.loadBalance();
+      this.mode = this.balance <= 300 ? "bankruptcy" : "bet";
       this.betAmount = 0;
       this.betSettled = false;
       this.doubleUnlocked = this.loadDoubleOrNothingUnlock();
@@ -111,6 +113,18 @@
         this.render();
         return;
       }
+      if (this.mode === "bankruptcy") {
+        if (command === "1" || command === "y") this.claimBenefactorBailout();
+        else if (command === "2" || command === "n" || command === "") {
+          this.bankruptcyDeferred = true;
+          this.mode = "restart";
+          this.addEvent("You declined the benefactor's offer. The lifeline remains unclaimed.");
+        } else {
+          this.addEvent("Choose 1 to file bankruptcy or 2 to decline for now.");
+        }
+        this.render();
+        return;
+      }
       if (this.mode === "start") {
         if (command === "2" && !this.doubleUnlocked) {
           this.addEvent("Double or Nothing is locked. Win Story Mode once to unlock it.");
@@ -174,16 +188,74 @@
       this.betSettled = true;
       if (!this.betAmount) {
         this.addEvent("No wager was placed. Your balance is unchanged.");
-        return;
-      }
-      if (playerWon) {
+      } else if (playerWon) {
         const payout = this.betAmount * 2;
         this.balance += payout;
         this.addEvent("BET WON: +$" + this.betAmount.toLocaleString() + " profit. Payout: $" + payout.toLocaleString() + ".");
+        this.saveBalance();
       } else {
         this.addEvent("BET LOST: -$" + this.betAmount.toLocaleString() + ".");
       }
+      this.maybeOfferBankruptcy();
+    }
+
+    getBenefactorNextAvailable() {
+      try {
+        const stored = Number(window.localStorage?.getItem("buckshot-browser.benefactor-next-available"));
+        return Number.isFinite(stored) && stored > 0 ? stored : 0;
+      } catch {
+        return 0;
+      }
+    }
+
+    formatIst(timestamp) {
+      return new Intl.DateTimeFormat("en-IN", {
+        timeZone: "Asia/Kolkata",
+        dateStyle: "medium",
+        timeStyle: "short",
+        hour12: true
+      }).format(new Date(timestamp)) + " IST";
+    }
+
+    nextIstMidnightAfterFortyEightHours(timestamp) {
+      const target = timestamp + 48 * 60 * 60 * 1000;
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }).formatToParts(new Date(target));
+      const part = (type) => Number(parts.find((entry) => entry.type === type).value);
+      let midnight = Date.UTC(part("year"), part("month") - 1, part("day"), -5, -30);
+      if (midnight < target) midnight += 24 * 60 * 60 * 1000;
+      return midnight;
+    }
+
+    maybeOfferBankruptcy() {
+      if (this.balance <= 300 && !this.bankruptcyDeferred) {
+        this.mode = "bankruptcy";
+        this.addEvent("Your wallet has fallen to 300 or less. The benefactor's lifeline is available to review.");
+      }
+    }
+
+    claimBenefactorBailout() {
+      const now = Date.now();
+      const nextAvailable = this.getBenefactorNextAvailable();
+      if (nextAvailable > now) {
+        this.addEvent("The benefactor is not ready to help yet. Next availability: " + this.formatIst(nextAvailable) + ".");
+        return;
+      }
+      this.balance += 500;
       this.saveBalance();
+      const nextPayout = this.nextIstMidnightAfterFortyEightHours(now);
+      try {
+        window.localStorage?.setItem("buckshot-browser.benefactor-next-available", String(nextPayout));
+      } catch {
+        // The claim remains active for this session if storage is blocked.
+      }
+      this.bankruptcyDeferred = false;
+      this.mode = "restart";
+      this.addEvent("The anonymous benefactor sends you 500 in cash. Next lifeline: " + this.formatIst(nextPayout) + ".");
     }
 
     loadDoubleOrNothingUnlock() {
@@ -234,7 +306,7 @@
       this.results = [];
       this.gameOver = false;
       this.busy = false;
-      this.mode = "bet";
+      this.mode = this.balance <= 300 && !this.bankruptcyDeferred ? "bankruptcy" : "bet";
       this.betAmount = 0;
       this.betSettled = false;
       this.render();
@@ -806,6 +878,29 @@
         return;
       }
 
+      if (this.mode === "bankruptcy") {
+        const nextAvailable = this.getBenefactorNextAvailable();
+        const available = nextAvailable <= Date.now();
+        screen.innerHTML = [
+          '<span class="bankruptcy-title">YOU\'RE BANKRUPT</span>',
+          "THE DEALER HAS TAKEN EVERYTHING",
+          "",
+          "FORTUNATELY, AN ANONYMOUS BENEFACTOR WANTS TO OFFER YOU 500 IN CASH.",
+          "THIS IS YOUR ONLY LIFELINE FOR THE NEXT 2 DAYS. DONT WASTE IT.",
+          "",
+          `CURRENT BALANCE: ${this.balance.toLocaleString()}`,
+          available ? "1. FILE BANKRUPTCY — CLAIM 500 CASH" : "THE BENEFACTOR IS NOT READY TO HELP YET.",
+          available ? "2. NOT NOW — KEEP PLAYING" : "NEXT LIFELINE: " + this.formatIst(nextAvailable),
+          "",
+          '<span class="separator">---</span>'
+        ].join("\\n");
+        promptLabel.textContent = available ? "1 to claim / 2 to decline:" : "2 to continue:";
+        input.disabled = false;
+        if (!input.readOnly) input.focus();
+        keypadButtons.forEach((b) => b.disabled = false);
+        return;
+      }
+
       if (this.mode === "start") {
         screen.innerHTML = [
           '<span class="title">BUCKSHOT ROULETTE</span>', "",
@@ -871,6 +966,7 @@
       const prompts = {
         item: "Item number:", steal: "Steal item number:",
         waiting: "Dealer:", cashout: "Choose 1 or 2:",
+        bankruptcy: "1 to claim / 2 to decline:",
         restart: "R to restart:", action: "Select an action:"
       };
       promptLabel.textContent = prompts[this.mode] || "Command:";
