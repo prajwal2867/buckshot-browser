@@ -171,20 +171,28 @@ test("zero health ends a Double or Nothing run even in stages 1 and 2", () => {
   assert.equal(game.winnings, 0);
 });
 
-test("Story losses in stages 1 and 2 revive the player and apply the correct penalties", () => {
+test("zero player health ends Story Mode immediately in every stage", () => {
+  for (const stage of [1, 2, 3]) {
+    const game = boot();
+    game.start("story");
+    game.stage = stage;
+    game.player.health = 0;
+    assert.equal(game.checkStageEnd(), true);
+    assert.equal(game.gameOver, true);
+    assert.equal(game.mode, "restart");
+    assert.equal(game.stage, stage);
+    assert.match(game.events.at(-2), /ran out of health/i);
+  }
+});
+
+test("defeating the Dealer in Story stages 1 and 2 advances the stage", () => {
   const game = boot();
   game.start("story");
-  game.player.health = 0;
-  game.checkStageEnd();
+  game.dealer.health = 0;
+  assert.equal(game.checkStageEnd(), true);
   assert.equal(game.stage, 2);
-  assert.equal(game.storyPenalty, 4000);
+  assert.equal(game.gameOver, false);
   assert.equal(game.player.health, 4);
-  game.player.health = 0;
-  game.checkStageEnd();
-  assert.equal(game.stage, 3);
-  assert.equal(game.storyPenalty, 6000);
-  assert.equal(game.player.health, 4);
-  assert.equal(game.player.fadedHealth, 2);
 });
 
 test("Story Mode payout deducts deaths, cigarettes and beer", () => {
