@@ -7,15 +7,20 @@ const { createAdapter } = require("@socket.io/redis-adapter");
 const { RedisRoomManager } = require("../server/redis-room-manager");
 const { attachRoomHandlers } = require("../server/room-handlers");
 
-const httpServer = http.createServer((_request, response) => {
-  response.writeHead(404, { "content-type": "text/plain" });
-  response.end("Not found");
-});
+const httpServer = http.createServer();
 
 const io = new Server(httpServer, {
   path: "/api/socket",
+  addTrailingSlash: false,
   transports: ["websocket"],
   serveClient: false
+});
+
+httpServer.on("request", (_request, response) => {
+  if (!response.headersSent && !response.writableEnded) {
+    response.writeHead(404, { "content-type": "text/plain" });
+    response.end("Not found");
+  }
 });
 
 const redisUrl = process.env.REDIS_URL;
