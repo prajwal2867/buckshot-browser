@@ -36,6 +36,7 @@
       this.opponent = this.dealer;
       this.mode = "start";
       this.gameMode = "story";
+      this.doubleUnlocked = this.loadDoubleOrNothingUnlock();
       this.stage = 1;
       this.reloadNumber = 0;
       this.stageReloads = 0;
@@ -87,6 +88,11 @@
     submit(raw) {
       const command = String(raw).trim().toLowerCase();
       if (this.mode === "start") {
+        if (command === "2" && !this.doubleUnlocked) {
+          this.addEvent("Double or Nothing is locked. Win Story Mode once to unlock it.");
+          this.render();
+          return;
+        }
         this.start(command === "2" ? "double" : "story");
         return;
       }
@@ -118,6 +124,23 @@
       else if (command === "3") this.openInventory();
       else this.addEvent("Choose 1, 2, or 3.");
       this.afterPlayerCommand();
+    }
+
+    loadDoubleOrNothingUnlock() {
+      try {
+        return window.localStorage?.getItem("buckshot-browser.double-or-nothing-unlocked") === "true";
+      } catch {
+        return false;
+      }
+    }
+
+    unlockDoubleOrNothing() {
+      this.doubleUnlocked = true;
+      try {
+        window.localStorage?.setItem("buckshot-browser.double-or-nothing-unlocked", "true");
+      } catch {
+        // The unlock remains available for this session if storage is blocked.
+      }
     }
 
     start(mode) {
@@ -368,6 +391,7 @@
         } else if (playerWon) {
           this.gameOver = true;
           this.mode = "restart";
+          this.unlockDoubleOrNothing();
           this.addEvent("You survived Story Mode. The briefcase is yours.");
           this.addEvent(`Final Story Mode cash: ${this.storyCash().toLocaleString()}.`);
         } else {
@@ -701,8 +725,12 @@
       if (this.mode === "start") {
         screen.innerHTML = [
           '<span class="title">BUCKSHOT ROULETTE</span>', "",
-          "1. Story Mode", "2. Double or Nothing", "",
-          "Press Enter for Story Mode, or enter 2 for Double or Nothing.",
+          "1. Story Mode",
+          this.doubleUnlocked ? "2. Double or Nothing" : "2. Double or Nothing (locked)",
+          "",
+          this.doubleUnlocked
+            ? "Press Enter for Story Mode, or enter 2 for Double or Nothing."
+            : "Win Story Mode once to unlock Double or Nothing.",
           "", '<span class="separator">---</span>'
         ].join("\n");
         promptLabel.textContent = "Mode:";
