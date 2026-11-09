@@ -351,7 +351,7 @@ test("Adrenaline expires after the selection window and consumes itself", () => 
   game.start("double");
   game.player.inventory = ["Adrenaline"];
   game.dealer.inventory = ["Beer"];
-  assert.equal(game.useItem(game.player, "Adrenaline"), "steal");
+  game.selectItem("1");
   assert.equal(game.mode, "steal");
   assert.equal(game.stealTimer, 1);
   game.expireAdrenaline();
@@ -368,7 +368,8 @@ test("choosing an Adrenaline target cancels its timeout and uses the stolen item
   game.chamber = ["blank", "live"];
   game.liveRemaining = 1;
   game.blankRemaining = 1;
-  assert.equal(game.useItem(game.player, "Adrenaline"), "steal");
+  game.selectItem("1");
+  assert.equal(game.mode, "steal");
   game.handleSteal("1");
   assert.equal(game.stealTimer, null);
   assert.deepEqual(Array.from(game.player.inventory), []);
