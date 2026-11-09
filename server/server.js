@@ -6,6 +6,7 @@ const express = require("express");
 const { Server } = require("socket.io");
 const { RoomManager } = require("./room-manager");
 const { attachRoomHandlers } = require("./room-handlers");
+const { attachGameHandlers } = require("./game-handlers");
 
 function createAppServer({ roomManager = new RoomManager() } = {}) {
   const app = express();
@@ -15,14 +16,11 @@ function createAppServer({ roomManager = new RoomManager() } = {}) {
   expiryTimer.unref?.();
   const publicRoot = path.join(__dirname, "..");
 
-  app.use(express.static(publicRoot, {
-    index: "index.html",
-    etag: true,
-    maxAge: "1h"
-  }));
+  app.use(express.static(publicRoot, { index: "index.html", etag: true, maxAge: "1h" }));
   app.get("/health", (_req, res) => res.json({ ok: true, service: "buckshot-multiplayer-local" }));
 
   attachRoomHandlers(io, roomManager);
+  attachGameHandlers(io, roomManager);
 
   return { app, httpServer, io, roomManager, expiryTimer };
 }
@@ -30,9 +28,7 @@ function createAppServer({ roomManager = new RoomManager() } = {}) {
 if (require.main === module) {
   const { httpServer } = createAppServer();
   const port = Number(process.env.PORT) || 3000;
-  httpServer.listen(port, "0.0.0.0", () => {
-    console.log(`Buckshot multiplayer server listening on port ${port}`);
-  });
+  httpServer.listen(port, "0.0.0.0", () => console.log(`Buckshot multiplayer server listening on port ${port}`));
 }
 
 module.exports = { createAppServer };

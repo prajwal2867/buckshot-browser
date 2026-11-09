@@ -8,46 +8,130 @@
   let socket = null;
   let activeRoomCode = null;
   let pendingRequest = null;
+  let isHost = false;
+  let latestGame = null;
 
-  const elements = {
-    open: byId("multiplayer-open"),
-    close: byId("multiplayer-close"),
-    identity: byId("multiplayer-identity"),
-    username: byId("multiplayer-username"),
-    saveUsername: byId("username-save"),
-    changeUsername: byId("username-change"),
-    lobby: byId("multiplayer-lobby"),
-    playerName: byId("multiplayer-player-name"),
-    create: byId("room-create"),
-    joinForm: byId("room-join-form"),
-    joinCode: byId("room-code"),
-    room: byId("multiplayer-room"),
-    status: byId("multiplayer-status"),
-    message: byId("multiplayer-message"),
-    codeCard: byId("room-code-card"),
-    codeDisplay: byId("room-code-display"),
-    request: byId("join-request"),
-    requestName: byId("join-request-name"),
-    accept: byId("join-accept"),
-    decline: byId("join-decline"),
-    players: byId("room-players"),
-    leave: byId("room-leave")
+  const el = {
+    open: byId("multiplayer-open"), close: byId("multiplayer-close"),
+    identity: byId("multiplayer-identity"), username: byId("multiplayer-username"),
+    saveUsername: byId("username-save"), changeUsername: byId("username-change"),
+    lobby: byId("multiplayer-lobby"), playerName: byId("multiplayer-player-name"),
+    create: byId("room-create"), joinForm: byId("room-join-form"), joinCode: byId("room-code"),
+    room: byId("multiplayer-room"), status: byId("multiplayer-status"),
+    message: byId("multiplayer-message"), codeCard: byId("room-code-card"),
+    codeDisplay: byId("room-code-display"), request: byId("join-request"),
+    requestName: byId("join-request-name"), accept: byId("join-accept"),
+    decline: byId("join-decline"), players: byId("room-players"),
+    leave: byId("room-leave"), start: byId("game-start"), game: byId("pvp-game"),
+    turn: byId("pvp-turn"), scoreboard: byId("pvp-scoreboard"),
+    magazine: byId("pvp-magazine"), known: byId("pvp-known-shell"),
+    shootOpponent: byId("pvp-shoot-opponent"), shootSelf: byId("pvp-shoot-self"),
+    inventory: byId("pvp-inventory"), steal: byId("pvp-steal"), events: byId("pvp-events")
   };
 
   const getUsername = () => {
-    try { return localStorage.getItem(usernameKey) || ""; }
-    catch { return ""; }
+    try { return localStorage.getItem(usernameKey) || ""; } catch { return ""; }
   };
-
-  const setMessage = (message) => { elements.message.textContent = message || ""; };
+  const setMessage = (message) => { el.message.textContent = message || ""; };
+  const makeButton = (label, onClick, className = "") => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    if (className) button.className = className;
+    button.addEventListener("click", onClick);
+    return button;
+  };
 
   function showIdentity() {
     const username = getUsername();
-    elements.identity.hidden = Boolean(username);
-    elements.lobby.hidden = !username;
-    elements.room.hidden = true;
-    elements.playerName.textContent = username;
-    if (!username) elements.username.focus();
+    el.identity.hidden = Boolean(username);
+    el.lobby.hidden = !username;
+    el.room.hidden = true;
+    el.playerName.textContent = username;
+    if (!username) el.username.focus();
+  }
+
+  function ensureSocket() {
+    if (socket) return socket;
+    if (typeof window.io !== "function") {
+      setMessage("Multiplayer needs the online server. Run npm start; opening index.html directly only supports single-player.");
+      return null;
+    }
+    socket = window.io({ path: "/api/socket", addTrailingSlash: false, transports: ["websocket"] });
+    socket.on("connect", () => setMessage("Connected to multiplayer server."));
+    socket.on("disconnect", () => setMessage("Connection lost. The current match may be interrupted."));
+    socket.on("connect_error", () => setMessage("Could not connect to the multiplayer server."));
+    socket.on("room:error", (data) => setMessage(data?.message || "Something went wrong."));
+    socket.on("game:error", (data) => setMessage(data?.message || "That move was rejected."));
+
+    socket.on("room:created", (data) => {
+      activeRoomCode = data.code;
+      isHost = true;
+      el.room.hidden = false;
+      el.lobby.hidden = true;
+      el.status.textContent = "Waiting for an opponent to request access.";
+      el.codeCard.hidden = false;
+      el.codeDisplay.textContent = data.code;
+      el.request.hidden = true;
+      el.players.hidden = true;
+      el.start.hidden = true;
+      el.game.hidden = true;
+      setMessage("Room created. Share the four-digit code.");
+    });
+    socket.on("room:join-pending", (data) => {
+      activeRoomCode = data.code;
+      isHost = false;
+      el.room.hidden = false;
+      el.lobby.hidden = true;
+      el.status.textContent = "Join request sent. Waiting for host approval.";
+      el.codeCard.hidden = true;
+      setMessage("Request sent to " + data.hostUsername + ".");
+    });
+    socket.on("room:join-request", (data) => {
+      pendingRequest = data;
+      el.request.hidden = false;
+      el.requestName.textContent = data.username;
+      setMessage("A player wants to join your room.");
+    });
+    socket.on("room:declined", () => {
+      activeRoomCode = null;
+      el.room.hidden = true;
+      el.lobby.hidden = false;
+      setMessage("The host declined your request.");
+    });
+    socket.on("room:player-joined", (data) => {
+      pendingRequest = null;
+      el.request.hidden = true;
+      el.players.hidden = false;
+      el.players.textContent = data.host.username + "  vs  " + data.guest.username;
+      el.status.textContent = "Opponent connected. Start when ready.";
+      el.start.hidden = false;
+      setMessage("Lobby ready. The host can start the match.");
+    });
+    socket.on("room:joined", (data) => {
+      activeRoomCode = data.code;
+      isHost = false;
+      el.room.hidden = false;
+      el.lobby.hidden = true;
+      el.codeCard.hidden = false;
+      el.codeDisplay.textContent = data.code;
+      el.request.hidden = true;
+      el.players.hidden = false;
+      el.players.textContent = data.host.username + "  vs  " + data.guest.username;
+      el.status.textContent = "Connected. Waiting for the host to start.";
+      el.start.hidden = true;
+      setMessage("You joined the room.");
+    });
+    socket.on("game:started", () => {
+      el.start.hidden = true;
+      el.status.textContent = "Match in progress.";
+      setMessage("The match has started.");
+    });
+    socket.on("game:state", (state) => {
+      latestGame = state;
+      renderGame(state);
+    });
+    return socket;
   }
 
   function emitWhenConnected(eventName, payload) {
@@ -61,82 +145,77 @@
     return true;
   }
 
-  function ensureSocket() {
-    if (socket) return socket;
-    if (typeof window.io !== "function") {
-      setMessage("Multiplayer needs the online server. Start the app with npm start; opening index.html directly only supports single-player.");
-      return null;
+  function renderGame(state) {
+    el.game.hidden = false;
+    el.start.hidden = true;
+    el.status.textContent = state.status === "finished" ? "Match finished." : "Match in progress.";
+    el.turn.textContent = state.status === "finished"
+      ? (state.winner || "A player") + " wins."
+      : state.yourTurn ? "Your turn." : state.turnUsername + "'s turn.";
+    el.scoreboard.replaceChildren();
+    state.players.forEach((player) => {
+      const card = document.createElement("div");
+      card.className = "pvp-player";
+      const name = document.createElement("strong");
+      name.textContent = player.username;
+      const health = document.createElement("span");
+      health.textContent = "Health: " + player.health + " / " + player.maxHealth;
+      const inventory = document.createElement("small");
+      inventory.textContent = "Items: " + (player.inventory.length ? player.inventory.join(", ") : "none");
+      card.append(name, health, inventory);
+      el.scoreboard.append(card);
+    });
+    el.magazine.textContent = "Magazine " + state.magazine.reload + " · " +
+      state.magazine.remaining + " shells remaining (" + state.magazine.live + " live / " +
+      state.magazine.blank + " blank)";
+    el.known.textContent = state.knownCurrentShell
+      ? "Your current-shell information: " + state.knownCurrentShell.toUpperCase()
+      : "You do not know the current shell.";
+    const canAct = state.status === "playing" && state.yourTurn;
+    el.shootOpponent.disabled = !canAct || state.stealOptions.length > 0;
+    el.shootSelf.disabled = !canAct || state.stealOptions.length > 0;
+    el.inventory.replaceChildren();
+    const own = state.players.find((player) => player.isYou);
+    if (own) {
+      own.inventory.forEach((item, index) => {
+        const button = makeButton("Use " + item, () => sendAction({ type: "item", itemIndex: index }), "secondary-button");
+        button.disabled = !canAct || state.stealOptions.length > 0;
+        el.inventory.append(button);
+      });
     }
-    socket = window.io({ path: "/api/socket", addTrailingSlash: false, transports: ["websocket"] });
-    socket.on("connect", () => setMessage("Connected to multiplayer server."));
-    socket.on("disconnect", () => setMessage("Connection lost. Room state may be unavailable until the server connection returns."));
-    socket.on("connect_error", () => setMessage("Could not connect to the multiplayer server."));
-    socket.on("room:error", (data) => setMessage(data?.message || "Something went wrong."));
-    socket.on("room:created", (data) => {
-      activeRoomCode = data.code;
-      elements.room.hidden = false;
-      elements.lobby.hidden = true;
-      elements.status.textContent = "Waiting for an opponent to request access.";
-      elements.codeCard.hidden = false;
-      elements.codeDisplay.textContent = data.code;
-      elements.request.hidden = true;
-      elements.players.hidden = true;
-      setMessage("Room created. Share the four-digit code.");
+    el.steal.hidden = !state.stealOptions.length;
+    el.steal.replaceChildren();
+    if (state.stealOptions.length) {
+      const heading = document.createElement("p");
+      heading.textContent = "Choose an item to steal:";
+      el.steal.append(heading);
+      state.stealOptions.forEach((item, index) => {
+        el.steal.append(makeButton(item, () => sendAction({ type: "steal", itemIndex: index })));
+      });
+    }
+    el.events.replaceChildren();
+    state.events.slice(-12).forEach((message) => {
+      const line = document.createElement("p");
+      line.textContent = "› " + message;
+      el.events.append(line);
     });
-    socket.on("room:join-pending", (data) => {
-      elements.room.hidden = false;
-      elements.lobby.hidden = true;
-      activeRoomCode = data.code;
-      elements.status.textContent = "Join request sent. Waiting for the host to respond.";
-      elements.codeCard.hidden = true;
-      setMessage("Request sent to " + data.hostUsername + ".");
-    });
-    socket.on("room:join-request", (data) => {
-      pendingRequest = data;
-      elements.request.hidden = false;
-      elements.requestName.textContent = data.username;
-      setMessage("A player wants to join your room.");
-    });
-    socket.on("room:declined", () => {
-      activeRoomCode = null;
-      elements.room.hidden = true;
-      elements.lobby.hidden = false;
-      setMessage("The host declined your request.");
-    });
-    socket.on("room:joined", (data) => {
-      activeRoomCode = data.code;
-      elements.room.hidden = false;
-      elements.lobby.hidden = true;
-      elements.codeCard.hidden = false;
-      elements.codeDisplay.textContent = data.code;
-      elements.request.hidden = true;
-      elements.players.hidden = false;
-      elements.players.textContent = data.host.username + "  vs  " + data.guest.username;
-      elements.status.textContent = "Connected to the room. Multiplayer gameplay is coming in the next phase.";
-      setMessage("You joined the room successfully.");
-    });
-    socket.on("room:player-joined", (data) => {
-      elements.request.hidden = true;
-      pendingRequest = null;
-      elements.players.hidden = false;
-      elements.players.textContent = data.host.username + "  vs  " + data.guest.username;
-      elements.status.textContent = "Opponent connected. The lobby is ready.";
-      setMessage("Player joined. Match gameplay will be added in the next phase.");
-    });
-    return socket;
   }
 
-  elements.open.addEventListener("click", () => {
+  function sendAction(action) {
+    if (!socket || !activeRoomCode) return;
+    socket.emit("game:action", { code: activeRoomCode, action });
+  }
+
+  el.open.addEventListener("click", () => {
     panel.hidden = !panel.hidden;
     if (!panel.hidden) showIdentity();
   });
-  elements.close.addEventListener("click", () => { panel.hidden = true; });
-
-  elements.saveUsername.addEventListener("click", () => {
-    const username = elements.username.value.trim();
+  el.close.addEventListener("click", () => { panel.hidden = true; });
+  el.saveUsername.addEventListener("click", () => {
+    const username = el.username.value.trim();
     if (!usernamePattern.test(username)) {
       setMessage("Use 3–16 letters, numbers, underscores or hyphens.");
-      elements.username.focus();
+      el.username.focus();
       return;
     }
     try { localStorage.setItem(usernameKey, username); }
@@ -147,59 +226,51 @@
     setMessage("Username saved on this browser.");
     showIdentity();
   });
-
-  elements.username.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") elements.saveUsername.click();
+  el.username.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") el.saveUsername.click();
   });
-
-  elements.changeUsername.addEventListener("click", () => {
-    elements.username.value = getUsername();
+  el.changeUsername.addEventListener("click", () => {
+    el.username.value = getUsername();
     try { localStorage.removeItem(usernameKey); } catch {}
     showIdentity();
   });
-
-  elements.create.addEventListener("click", () => {
-    emitWhenConnected("room:create", { username: getUsername() });
-  });
-
-  elements.joinForm.addEventListener("submit", (event) => {
+  el.create.addEventListener("click", () => emitWhenConnected("room:create", { username: getUsername() }));
+  el.joinForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    const code = elements.joinCode.value.trim();
-    if (!/^\d{4}$/.test(code)) {
-      setMessage("Enter a valid four-digit room code.");
-      return;
-    }
+    const code = el.joinCode.value.trim();
+    if (!/^\d{4}$/.test(code)) { setMessage("Enter a valid four-digit room code."); return; }
     emitWhenConnected("room:join", { code, username: getUsername() });
   });
-
-  elements.accept.addEventListener("click", () => {
-    if (!socket || !pendingRequest) return;
-    socket.emit("room:respond", {
-      code: pendingRequest.code,
-      requestId: pendingRequest.requestId,
-      accepted: true
+  el.accept.addEventListener("click", () => {
+    if (socket && pendingRequest) socket.emit("room:respond", {
+      code: pendingRequest.code, requestId: pendingRequest.requestId, accepted: true
     });
   });
-
-  elements.decline.addEventListener("click", () => {
+  el.decline.addEventListener("click", () => {
     if (!socket || !pendingRequest) return;
     socket.emit("room:respond", {
-      code: pendingRequest.code,
-      requestId: pendingRequest.requestId,
-      accepted: false
+      code: pendingRequest.code, requestId: pendingRequest.requestId, accepted: false
     });
     pendingRequest = null;
-    elements.request.hidden = true;
+    el.request.hidden = true;
     setMessage("Join request declined.");
   });
-
-  elements.leave.addEventListener("click", () => {
+  el.start.addEventListener("click", () => {
+    if (isHost && socket && activeRoomCode) socket.emit("game:start", { code: activeRoomCode });
+  });
+  el.shootOpponent.addEventListener("click", () => sendAction({ type: "shoot", target: "opponent" }));
+  el.shootSelf.addEventListener("click", () => sendAction({ type: "shoot", target: "self" }));
+  el.leave.addEventListener("click", () => {
     if (socket) socket.disconnect();
     socket = null;
     activeRoomCode = null;
     pendingRequest = null;
-    elements.room.hidden = true;
-    elements.request.hidden = true;
+    isHost = false;
+    latestGame = null;
+    el.game.hidden = true;
+    el.start.hidden = true;
+    el.room.hidden = true;
+    el.request.hidden = true;
     showIdentity();
     setMessage("You left the multiplayer lobby.");
   });
