@@ -228,7 +228,15 @@
     el.storyOpen.classList.toggle("active", !multiplayer);
     el.open.setAttribute("aria-pressed", String(multiplayer));
     el.storyOpen.setAttribute("aria-pressed", String(!multiplayer));
-    if (multiplayer) showIdentity();
+    if (multiplayer) {
+      if (activeRoomCode) {
+        el.identity.hidden = true;
+        el.lobby.hidden = true;
+        el.room.hidden = false;
+      } else {
+        showIdentity();
+      }
+    }
   }
 
   el.open.addEventListener("click", () => showMode("multiplayer"));
