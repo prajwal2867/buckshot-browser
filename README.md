@@ -7,7 +7,7 @@ A lightweight browser recreation of the core single-player rules in Buckshot Rou
 Open `index.html` in a modern browser.
 
 - Press Enter to start Story Mode.
-- Enter `2` and press Enter to start Double or Nothing.
+- Beat Story Mode once to unlock Double or Nothing; after unlocking, enter `2` and press Enter to start it.
 - Use `1` to shoot the Dealer, `2` to shoot yourself, and `3` to open your inventory.
 - Select an item by its number. Enter `0` to return from the inventory.
 - In Double or Nothing, choose `1` to double down or `2` to cash out.
