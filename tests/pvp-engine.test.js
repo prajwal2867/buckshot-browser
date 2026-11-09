@@ -24,6 +24,9 @@ test("match starts with two players at four health and a randomized first player
 
 test("a live shot damages its target and passes the turn", () => {
   const state = gameWithTurn();
+  state.chamber = ["live", "blank"];
+  state.liveRemaining = 1;
+  state.blankRemaining = 1;
   assert.deepEqual(performAction(state, "a", { type: "shoot", target: "opponent" }), { ok: true });
   assert.equal(state.players[1].health, 3);
   assert.equal(state.turnPlayerId, "b");
