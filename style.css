@@ -184,3 +184,48 @@ main {
 #screen .title { font-weight: 700; letter-spacing: 0.035em; }
 #screen .separator { color: #777; }
 #screen .bankruptcy-title { color: #ff5c5c; font-weight: 700; letter-spacing: 0.06em; }
+
+
+/* Multiplayer PvP match panel */
+.pvp-game {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #39423d;
+}
+.pvp-game h2 { margin: 0 0 .75rem; font-size: 1rem; letter-spacing: .12em; }
+.pvp-turn { font-weight: 700; }
+.pvp-scoreboard {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+  margin: .75rem 0;
+}
+.pvp-player {
+  display: grid;
+  gap: .35rem;
+  min-width: 0;
+  padding: .75rem;
+  border: 1px solid #39423d;
+  background: #0b100d;
+}
+.pvp-player small { overflow-wrap: anywhere; color: #b8c1bb; }
+.pvp-controls, .pvp-inventory, .pvp-steal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin: .75rem 0;
+}
+.pvp-inventory button, .pvp-steal button { font-size: .8rem; }
+.pvp-events {
+  max-height: 180px;
+  overflow-y: auto;
+  padding: .5rem .75rem;
+  border: 1px solid #303a34;
+  background: #080b09;
+  font-size: .8rem;
+}
+.pvp-events p { margin: .35rem 0; color: #c1c9c3; }
+.pvp-game button:disabled { opacity: .4; cursor: not-allowed; }
+@media (max-width: 520px) {
+  .pvp-scoreboard { grid-template-columns: 1fr; }
+}
