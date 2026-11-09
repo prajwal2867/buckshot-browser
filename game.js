@@ -794,6 +794,7 @@
           `CURRENT BALANCE: ${this.balance.toLocaleString()}`, "",
           "PLACE YOUR BET",
           "Enter the amount you want to wager.",
+          "Winning pays 1:1 profit (2x your stake in total).",
           "Enter 0 to play without bets.",
           `MAXIMUM BET: ${this.balance.toLocaleString()}`, "",
           '<span class="separator">---</span>'
@@ -809,7 +810,7 @@
         screen.innerHTML = [
           '<span class="title">BUCKSHOT ROULETTE</span>', "",
           `CURRENT BALANCE: ${this.balance.toLocaleString()}`,
-          `YOUR BET: ${this.betAmount ? "$" + this.betAmount.toLocaleString() : "NONE"}`, "",
+          `YOUR BET: ${this.betAmount ? "$" + this.betAmount.toLocaleString() + " | WIN: +$" + this.betAmount.toLocaleString() + " | PAYOUT: $" + (this.betAmount * 2).toLocaleString() : "NONE"}`, "",
           "1. Story Mode",
           this.doubleUnlocked ? "2. Double or Nothing" : "2. Double or Nothing (locked)",
           "",
@@ -832,7 +833,7 @@
         `<span class="title">==== ${this.gameMode === "story" ? "STORY" : "DOUBLE OR NOTHING"} | STAGE ${this.stage} | RELOAD ${this.reloadNumber} ====</span>`,
         "",
         `CURRENT BALANCE: ${this.balance.toLocaleString()}`,
-        `ACTIVE BET: ${this.betAmount ? "$" + this.betAmount.toLocaleString() + " | WIN PROFIT: $" + this.betAmount.toLocaleString() : "NONE"}`,
+        `ACTIVE BET: ${this.betAmount ? "$" + this.betAmount.toLocaleString() + " | WIN: +$" + this.betAmount.toLocaleString() + " | PAYOUT: $" + (this.betAmount * 2).toLocaleString() : "NONE"}`,
         "",
         `SHELLS: ${this.chamber.length} ( ${this.liveRemaining} LIVE / ${this.blankRemaining} BLANK )`,
         `PLAYER LIVES: ${health(this.player)}`,
