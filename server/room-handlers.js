@@ -70,6 +70,12 @@ function attachRoomHandlers(io, roomManager) {
         }
 
         if (result.accepted) {
+          const guestSockets = await io.in(result.guestSocketId).fetchSockets();
+          if (!guestSockets.length) {
+            await roomManager.disconnect(result.guestSocketId);
+            socket.emit("room:error", { message: "That player disconnected before you could approve the request." });
+            return;
+          }
           await socket.join(result.code);
           // The guest may be connected to another Vercel Function instance.
           // The Redis adapter makes this remote socket operation cross-instance.
