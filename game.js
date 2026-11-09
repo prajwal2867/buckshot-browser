@@ -934,7 +934,7 @@
           `MAXIMUM BET: ${this.balance.toLocaleString()}`, "",
           '<span class="separator">---</span>'
         ].join("\n");
-        promptLabel.textContent = "Bet amount:";
+        promptLabel.textContent = "Bet amount: ";
         input.disabled = false;
         if (!input.readOnly) input.focus();
         keypadButtons.forEach((b) => b.disabled = false);
