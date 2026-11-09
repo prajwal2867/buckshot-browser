@@ -74,7 +74,8 @@
       el.room.hidden = false;
       el.lobby.hidden = true;
       el.status.textContent = "WAITING ...";
-      el.codeCard.hidden = true;
+      el.codeCard.hidden = false;
+      el.codeDisplay.textContent = data.code.split("").join(" ");
       el.request.hidden = true;
       el.players.hidden = true;
       el.start.hidden = true;
@@ -89,6 +90,7 @@
       el.lobby.hidden = true;
       el.status.textContent = "WAITING ...";
       el.codeCard.hidden = true;
+      el.leave.textContent = "LEAVE ROOM [ 1 ]";
       setMessage("Request sent to " + data.hostUsername + ".");
     });
     socket.on("room:join-request", (data) => {
@@ -276,6 +278,7 @@
     });
     pendingRequest = null;
     el.request.hidden = true;
+    el.leave.textContent = "LEAVE ROOM [ 1 ]";
     setMessage("Join request declined.");
   });
   el.start.addEventListener("click", () => {
