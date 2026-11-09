@@ -23,13 +23,18 @@ function boot(randomValues = []) {
     "#keypad": keypad
   };
   const document = { querySelector: (selector) => nodes[selector] };
+  const scheduledTimers = [];
   const window = {
     matchMedia: () => ({ matches: false, addEventListener() {} }),
-    setTimeout: () => 1,
+    setTimeout: (callback, delay) => {
+      scheduledTimers.push({ callback, delay });
+      return scheduledTimers.length;
+    },
     clearTimeout() {},
     location: { reload() {} }
   };
   vm.runInNewContext(source, { document, window, Math: math, Date, clearTimeout() {} });
+  window.buckshotGame.scheduledTimers = scheduledTimers;
   return window.buckshotGame;
 }
 
@@ -354,6 +359,7 @@ test("Adrenaline expires after the selection window and consumes itself", () => 
   game.selectItem("1");
   assert.equal(game.mode, "steal");
   assert.equal(game.stealTimer, 1);
+  assert.equal(game.scheduledTimers.at(-1).delay, 5000);
   game.expireAdrenaline();
   assert.equal(game.mode, "action");
   assert.deepEqual(Array.from(game.player.inventory), []);
