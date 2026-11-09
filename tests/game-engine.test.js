@@ -144,3 +144,13 @@ test("Dealer stops its item phase when Adrenaline steals a Beer that reloads the
   assert.equal(game.dealer.inventory.length, 0);
   assert.ok(game.chamber.length >= 2);
 });
+
+test("zero health ends a Double or Nothing run even in stages 1 and 2", () => {
+  const game = boot();
+  game.start("double");
+  game.stage = 1;
+  game.player.health = 0;
+  assert.equal(game.checkStageEnd(), true);
+  assert.equal(game.gameOver, true);
+  assert.equal(game.winnings, 0);
+});
