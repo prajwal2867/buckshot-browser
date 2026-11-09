@@ -112,3 +112,35 @@ test("Story stage 3 cuts the wire at zero normal charges and the next hit is fat
   game.damage(game.player, 1);
   assert.equal(game.player.dead, true);
 });
+
+test("Double or Nothing calculates the timed payout once, then doubles it", () => {
+  const game = boot();
+  game.start("double");
+  game.stage = 3;
+  game.setNumber = 1;
+  game.setStartedAt = Date.now() - 60000;
+  game.dealer.dead = true;
+  game.checkStageEnd();
+  assert.equal(game.winnings, 66000);
+  game.setNumber = 2;
+  game.dealer.dead = true;
+  game.player.dead = false;
+  game.checkStageEnd();
+  assert.equal(game.winnings, 132000);
+});
+
+test("Dealer stops its item phase when Adrenaline steals a Beer that reloads the shotgun", () => {
+  const game = boot();
+  game.start("double");
+  game.current = game.dealer;
+  game.opponent = game.player;
+  game.dealer.inventory = ["Adrenaline"];
+  game.player.inventory = ["Beer"];
+  game.chamber = ["blank"];
+  game.liveRemaining = 0;
+  game.blankRemaining = 1;
+  game.dealerUseItems();
+  assert.equal(game.current, game.player);
+  assert.equal(game.dealer.inventory.length, 0);
+  assert.ok(game.chamber.length >= 2);
+});
