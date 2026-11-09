@@ -205,8 +205,8 @@ class RedisRoomManager {
       1,
       this.socketKey(socketId),
       this.keyPrefix + "room:",
-      this.keyPrefix + "socket:",
       socketId,
+      this.keyPrefix + "socket:",
       now,
       this.ttlSeconds
     );
