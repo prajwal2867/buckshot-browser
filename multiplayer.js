@@ -175,7 +175,7 @@
     el.shootOpponent.disabled = !canAct || state.stealOptions.length > 0;
     el.shootSelf.disabled = !canAct || state.stealOptions.length > 0;
     el.inventory.replaceChildren();
-    const own = state.players.find((player) => player.inventory);
+    const own = state.players.find((player) => player.isYou);
     if (own) {
       own.inventory.forEach((item, index) => {
         const button = makeButton("Use " + item, () => sendAction({ type: "item", itemIndex: index }), "secondary-button");
