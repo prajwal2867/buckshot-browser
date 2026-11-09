@@ -730,7 +730,13 @@
         }
         case "Burner Phone": {
           if (this.chamber.length < 2) return false;
-          const index = randomInt(1, this.chamber.length - 1);
+          const unknownPositions = this.chamber
+            .map((_, index) => index)
+            .filter((index) => index > 0 && !this.futureKnowledge[key][index]);
+          if (!unknownPositions.length) return false;
+          // Reveal the nearest unseen future shell so the information is
+          // likely to become actionable before the magazine runs out.
+          const index = unknownPositions[0];
           const future = this.chamber[index];
           this.futureKnowledge[key][index] = future;
           this.addEvent(`The Burner Phone reveals shell ${index + 1}: ${future.toUpperCase()}.`);
@@ -775,9 +781,50 @@
       }
     }
 
+    dealerItemValue(item, owner = this.dealer) {
+      const other = owner === this.player ? this.dealer : this.player;
+      const known = this.currentKnowledge(owner);
+      const mixedShells = this.liveRemaining > 0 && this.blankRemaining > 0;
+      const canHeal = !owner.cutWire && !owner.dead && owner.health < owner.maxHealth;
+      const missingHealth = owner.maxHealth - owner.health;
+
+      switch (item) {
+        case "Cigarette Pack":
+          return canHeal ? 120 + Math.min(1, missingHealth) : -1;
+        case "Handcuffs":
+          return !other.handcuffed ? 105 : -1;
+        case "Adrenaline":
+          return -1;
+        case "Magnifying Glass":
+          return !known && mixedShells ? 90 : -1;
+        case "Inverter":
+          return known === "blank" && this.chamber.length ? 115 : -1;
+        case "Hand Saw":
+          if (this.isSawedOff) return -1;
+          if (known === "live") return 110;
+          if (!known && this.liveRemaining > this.blankRemaining) return 65;
+          return -1;
+        case "Beer":
+          return known === "blank" && this.chamber.length > 1 ? 100 : -1;
+        case "Burner Phone":
+          return this.chamber.length > 1 &&
+            this.chamber.some((_, index) => index > 0 && !this.futureKnowledge[this.entityKey(owner)][index])
+            ? 70 : -1;
+        case "Expired Medicine":
+          return !owner.cutWire && !owner.dead && owner.health >= 2 &&
+            missingHealth >= 2 ? 55 : -1;
+        default:
+          return -1;
+      }
+    }
+
     chooseDealerSteal(candidates) {
-      const order = ["Handcuffs", "Hand Saw", "Cigarette Pack", "Magnifying Glass", "Inverter", "Beer", "Burner Phone", "Expired Medicine"];
-      return order.find((item) => candidates.includes(item)) || pick(candidates);
+      // Steal the item with the greatest immediate tactical value, not just
+      // the first item in a fixed priority list.
+      return candidates
+        .map((item) => ({ item, value: this.dealerItemValue(item, this.dealer) }))
+        .filter((entry) => entry.value >= 0)
+        .sort((a, b) => b.value - a.value)[0]?.item || null;
     }
 
     dealerUseItems() {
@@ -798,20 +845,28 @@
 
     chooseDealerItem() {
       const inventory = this.dealer.inventory;
-      const known = this.currentKnowledge(this.dealer);
-      if (inventory.includes("Cigarette Pack") && !this.dealer.cutWire &&
-          this.dealer.health < this.dealer.maxHealth) return "Cigarette Pack";
-      if (inventory.includes("Handcuffs") && !this.player.handcuffed) return "Handcuffs";
-      if (inventory.includes("Adrenaline") && this.player.inventory.some((i) => i !== "Adrenaline")) return "Adrenaline";
-      if (inventory.includes("Magnifying Glass") && !known && this.liveRemaining && this.blankRemaining) return "Magnifying Glass";
-      if (inventory.includes("Burner Phone") && this.chamber.length > 1) return "Burner Phone";
-      if (inventory.includes("Hand Saw") && !this.isSawedOff &&
-          (known === "live" || (!known && this.liveRemaining > this.blankRemaining))) return "Hand Saw";
-      if (inventory.includes("Inverter") && known === "blank" && this.chamber.length) return "Inverter";
-      if (inventory.includes("Beer") && known === "blank" && this.chamber.length > 1) return "Beer";
-      if (inventory.includes("Expired Medicine") && !this.dealer.cutWire &&
-          this.dealer.health > 1 && this.dealer.health <= this.dealer.maxHealth - 2) return "Expired Medicine";
-      return null;
+      if (!inventory.length) return null;
+
+      // Adrenaline is valuable when it can immediately steal and activate
+      // something useful. Avoid spending it on an item with no current value.
+      const stealable = this.player.inventory.filter((item) =>
+        item !== "Adrenaline" &&
+        !(item === "Handcuffs" && this.player.handcuffed) &&
+        !(item === "Hand Saw" && this.isSawedOff) &&
+        !(item === "Burner Phone" && this.chamber.length < 2)
+      );
+      const stolenItem = this.chooseDealerSteal(stealable);
+      const scored = inventory.map((item) => {
+        let value = this.dealerItemValue(item, this.dealer);
+        if (item === "Adrenaline") value = stolenItem ? 108 + this.dealerItemValue(stolenItem, this.dealer) / 10 : -1;
+        return { item, value };
+      });
+
+      // Re-evaluate after every use. This naturally enables combinations:
+      // inspect -> invert a known blank -> saw the resulting live shell.
+      return scored
+        .filter((entry) => entry.value >= 0)
+        .sort((a, b) => b.value - a.value)[0]?.item || null;
     }
 
     runDealerTurn() {
