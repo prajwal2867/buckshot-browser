@@ -10,7 +10,7 @@ const { attachRoomHandlers } = require("./room-handlers");
 function createAppServer({ roomManager = new RoomManager() } = {}) {
   const app = express();
   const httpServer = http.createServer(app);
-  const io = new Server(httpServer, { path: "/api/socket" });
+  const io = new Server(httpServer, { path: "/api/socket", addTrailingSlash: false });
   const expiryTimer = setInterval(() => roomManager.expire(), 60 * 1000);
   expiryTimer.unref?.();
   const publicRoot = path.join(__dirname, "..");
