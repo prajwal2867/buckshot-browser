@@ -374,11 +374,15 @@
       } else if (this.stage < 3) {
         this.advanceStage();
       } else {
-        const elapsedSeconds = (Date.now() - this.setStartedAt) / 1000;
-        const setScore = Math.max(10, Math.floor(70000 - (elapsedSeconds * 200 / 3)));
-        this.winnings += setScore * this.setNumber;
+        if (this.setNumber === 1) {
+          const elapsedSeconds = (Date.now() - this.setStartedAt) / 1000;
+          this.winnings = Math.max(10, Math.floor(70000 - (elapsedSeconds * 200 / 3)));
+          this.addEvent(`Initial set cleared. Your starting payout is ${this.winnings.toLocaleString()}.`);
+        } else {
+          this.winnings *= 2;
+          this.addEvent(`Double successful. Your running payout is now ${this.winnings.toLocaleString()}.`);
+        }
         this.mode = "cashout";
-        this.addEvent(`Set cleared. Added $${setScore.toLocaleString()} × ${this.setNumber} to your run.`);
       }
       this.render();
       return true;
@@ -398,7 +402,6 @@
     startNextSet() {
       this.setNumber += 1;
       this.stage = 1;
-      this.setStartedAt = Date.now();
       this.player = this.makeEntity("Player");
       this.dealer = this.makeEntity("Dealer");
       this.current = this.player;
