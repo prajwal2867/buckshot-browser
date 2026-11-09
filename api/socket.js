@@ -6,9 +6,9 @@ const Redis = require("ioredis");
 const { createAdapter } = require("@socket.io/redis-adapter");
 const { RedisRoomManager } = require("../server/redis-room-manager");
 const { attachRoomHandlers } = require("../server/room-handlers");
+const { attachGameHandlers } = require("../server/game-handlers");
 
 const httpServer = http.createServer();
-
 const io = new Server(httpServer, {
   path: "/api/socket",
   addTrailingSlash: false,
@@ -24,7 +24,6 @@ httpServer.on("request", (_request, response) => {
 });
 
 const redisUrl = process.env.REDIS_URL;
-
 if (!redisUrl) {
   io.on("connection", (socket) => {
     socket.emit("room:error", {
@@ -41,9 +40,10 @@ if (!redisUrl) {
   const publisher = new Redis(redisUrl, redisOptions);
   const subscriber = publisher.duplicate();
   const stateClient = publisher.duplicate();
-
   io.adapter(createAdapter(publisher, subscriber));
-  attachRoomHandlers(io, new RedisRoomManager(stateClient));
+  const roomManager = new RedisRoomManager(stateClient);
+  attachRoomHandlers(io, roomManager);
+  attachGameHandlers(io, roomManager);
 }
 
 module.exports = httpServer;
