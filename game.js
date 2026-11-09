@@ -54,6 +54,8 @@
       this.winnings = 0;
       this.setStartedAt = 0;
       this.storyPenalty = 0;
+      this.cigarettesUsed = 0;
+      this.beersUsed = 0;
       this.stealableItems = [];
       this.stealOwner = null;
       this.render();
@@ -123,6 +125,8 @@
       this.setNumber = 1;
       this.winnings = 0;
       this.storyPenalty = 0;
+      this.cigarettesUsed = 0;
+      this.beersUsed = 0;
       this.results = [];
       this.events = [];
       this.gameOver = false;
@@ -355,10 +359,12 @@
           this.gameOver = true;
           this.mode = "restart";
           this.addEvent("You survived Story Mode. The briefcase is yours.");
+          this.addEvent(`Final Story Mode cash: ${this.storyCash().toLocaleString()}.`);
         } else {
           this.gameOver = true;
           this.mode = "restart";
           this.addEvent("The Dealer wins. You did not survive the final stage.");
+          this.addEvent(`Final Story Mode cash: ${this.storyCash().toLocaleString()}.`);
         }
       } else if (!playerWon) {
         this.gameOver = true;
@@ -398,6 +404,10 @@
       this.current = this.player;
       this.opponent = this.dealer;
       this.beginStage();
+    }
+
+    storyCash() {
+      return Math.max(0, 70000 - this.storyPenalty - this.cigarettesUsed * 220 - this.beersUsed * 495);
     }
 
     finishDoubleRun() {
@@ -496,12 +506,14 @@
           return true;
         case "Beer": {
           const ejected = this.drawShell();
+          if (owner === this.player) this.beersUsed++;
           this.isSawedOff = false;
           this.addEvent(`${owner.name} racks the shotgun and ejects a ${ejected.toUpperCase()} shell.`);
           if (!this.chamber.length) this.reload();
           return true;
         }
         case "Cigarette Pack": {
+          if (owner === this.player) this.cigarettesUsed++;
           const healed = this.heal(owner, 1);
           this.addEvent(healed ? `${owner.name} restores 1 charge.` : `${owner.name} is already at maximum normal health.`);
           return true;
@@ -515,6 +527,11 @@
           this.chamber[0] = this.chamber[0] === "live" ? "blank" : "live";
           if (this.chamber[0] === "live") { this.liveRemaining++; this.blankRemaining--; }
           else { this.liveRemaining--; this.blankRemaining++; }
+          for (const key of ["player", "dealer"]) {
+            if (this.futureKnowledge[key][0]) {
+              this.futureKnowledge[key][0] = this.futureKnowledge[key][0] === "live" ? "blank" : "live";
+            }
+          }
           this.knownShell = { player: null, dealer: null };
           this.addEvent(`${owner.name} inverts the current shell.`);
           return true;
@@ -577,6 +594,9 @@
         if (result === "steal") break;
         if (result) this.consumeItem(this.dealer, item);
         if (this.checkStageEnd()) return;
+        // A Beer/Adrenaline effect can empty the magazine and trigger a reload.
+        // The player owns the first action of every fresh magazine.
+        if (this.current !== this.dealer) return;
       }
     }
 
@@ -677,7 +697,7 @@
       if (this.mode === "cashout") {
         lines.push(`RUNNING WINNINGS: $${this.winnings.toLocaleString()}`, "1. Double down", "2. Cash out");
       } else if (this.mode === "restart") {
-        lines.push("GAME OVER", `RUNNING WINNINGS: $${this.winnings.toLocaleString()}`, "Press R to restart.");
+        lines.push("GAME OVER", `FINAL CASH: ${(this.gameMode === "story" ? this.storyCash() : this.winnings).toLocaleString()}`, "Press R to restart.");
       } else {
         lines.push("1. Shoot the Dealer", "2. Shoot Yourself", "3. Use an item");
       }
