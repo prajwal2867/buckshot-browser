@@ -85,7 +85,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .multiplayer-panel .identity-line { justify-content: flex-start; color: #aaa; font-size: .8rem; }
 .multiplayer-panel .identity-line strong { color: #fff; }
 .multiplayer-panel .status-line { padding: 0; background: transparent; border: 0; font-size: .8rem; }
-.multiplayer-panel .room-code { display: inline-block; font-size: 1.2rem; letter-spacing: .35em; }
+.multiplayer-panel .room-code-line { margin: .75rem 0; }
+.multiplayer-panel .room-code { display: inline-block; font-size: 1.1rem; letter-spacing: .25em; }
 .multiplayer-panel .join-request { margin: 1rem 0; padding: 0; border: 0; }
 .multiplayer-panel .room-players { margin: 1rem 0; font-size: .9rem; color: #fff; }
 .multiplayer-panel .secondary-button { background: transparent; }
