@@ -1,6 +1,6 @@
 # Buckshot Roulette — Browser CLI
 
-A browser recreation of Buckshot Roulette with a single-player game and an in-progress online multiplayer foundation.
+A browser recreation of Buckshot Roulette with a single-player game and an online multiplayer lobby.
 
 ## Run locally
 
@@ -11,19 +11,35 @@ npm install
 npm start
 ```
 
-Open http://localhost:3000. Multiplayer requires the app to be served by this Node.js server; opening `index.html` directly only supports the existing single-player game.
+Open http://localhost:3000. The local server uses an in-memory room manager, so local lobby testing does not require Redis.
 
-## Multiplayer foundation
+## Vercel multiplayer setup
 
-The current multiplayer milestone includes:
+The frontend remains a static Vercel deployment. The multiplayer WebSocket endpoint runs as a Vercel Node.js Function at `/api/socket`.
+
+Vercel Functions do not share process memory. Production rooms are therefore stored in Redis, and the Socket.IO Redis adapter relays events between Function instances.
+
+1. In the Vercel project, open **Storage** or **Integrations** and install **Upstash for Redis**.
+2. Link the Redis database to this Vercel project.
+3. Make sure the project has a `REDIS_URL` environment variable containing the Upstash Redis connection URL (the `rediss://...` URL, not the REST URL/token pair).
+4. Apply the variable to Production and Preview environments as needed.
+5. Redeploy after adding or changing environment variables.
+
+Never commit Redis credentials or expose them in browser code. The API function fails closed for multiplayer if `REDIS_URL` is missing; the static single-player game remains available.
+
+The browser connects to the same-origin `/api/socket` endpoint using WebSocket transport. No separate socket-hosting provider is required.
+
+## Current multiplayer scope
+
 - Browser-persisted display usernames (3–16 letters, numbers, underscores or hyphens).
 - Four-digit room creation.
-- Joining requests that require host approval.
-- In-memory room lifecycle and inactive-room expiration.
-- Express + Socket.IO server.
-- Automated room-manager tests.
+- Join requests that require host approval.
+- Redis-backed room state shared across Vercel Function instances.
+- Redis-backed Socket.IO adapter for cross-instance event delivery.
+- Room and socket membership updates are atomic Redis operations.
+- Local development retains an in-memory room manager.
 
-Rooms currently live in server memory. Restarting the server clears them. The lobby is a foundation only: PvP gameplay, server-authoritative ammunition and item logic, and the 60-second reconnect flow are not implemented yet.
+PvP gameplay, server-authoritative ammunition and item logic, and the 60-second reconnect flow are the next phases. A Vercel deployment also needs its Upstash Redis integration configured before the online lobby can create rooms.
 
 ## Tests
 
@@ -31,4 +47,4 @@ Rooms currently live in server memory. Restarting the server clears them. The lo
 npm test
 ```
 
-The original single-player rules-engine tests remain in place.
+The CI workflow starts Redis and runs the Redis room-manager integration tests as well as the existing single-player and in-memory room-manager tests.
