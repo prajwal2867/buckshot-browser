@@ -382,3 +382,27 @@ test("choosing an Adrenaline target cancels its timeout and uses the stolen item
   assert.deepEqual(Array.from(game.dealer.inventory), []);
   assert.equal(game.mode, "action");
 });
+
+
+test("Double or Nothing is locked until the player wins Story Mode", () => {
+  const game = boot();
+  game.submit("2");
+  assert.equal(game.mode, "start");
+  assert.equal(game.gameMode, "story");
+  assert.match(game.events.at(-1), /Win Story Mode once/);
+});
+
+test("winning Story Mode unlocks Double or Nothing", () => {
+  const game = boot();
+  game.start("story");
+  game.stage = 3;
+  game.player.health = 1;
+  game.dealer.health = 0;
+  game.dealer.dead = true;
+  assert.equal(game.checkStageEnd(), true);
+  assert.equal(game.doubleUnlocked, true);
+  game.reset();
+  game.submit("2");
+  assert.equal(game.gameMode, "double");
+  assert.equal(game.mode, "action");
+});
