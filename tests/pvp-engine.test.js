@@ -111,3 +111,48 @@ test("player snapshots never expose the chamber sequence or opponent's private k
   assert.equal("knownShell" in view, false);
   assert.equal(view.knownCurrentShell, null);
 });
+
+
+test("Beer ejects the current shell without passing the turn", () => {
+  const state = gameWithTurn();
+  state.players[0].inventory = ["Beer"];
+  state.chamber = ["blank", "live"];
+  state.liveRemaining = 1;
+  state.blankRemaining = 1;
+  performAction(state, "a", { type: "item", itemIndex: 0 });
+  assert.deepEqual(state.chamber, ["live"]);
+  assert.equal(state.turnPlayerId, "a");
+});
+
+test("Inverter flips the current shell and updates shell counts", () => {
+  const state = gameWithTurn();
+  state.players[0].inventory = ["Inverter"];
+  state.chamber = ["blank", "live"];
+  state.liveRemaining = 1;
+  state.blankRemaining = 1;
+  performAction(state, "a", { type: "item", itemIndex: 0 });
+  assert.equal(state.chamber[0], "live");
+  assert.equal(state.liveRemaining, 2);
+  assert.equal(state.blankRemaining, 0);
+  assert.equal(getPlayerView(state, "a").knownCurrentShell, "live");
+});
+
+test("Cigarette Pack heals one point but never exceeds maximum health", () => {
+  const state = gameWithTurn();
+  state.players[0].health = 2;
+  state.players[0].inventory = ["Cigarette Pack"];
+  performAction(state, "a", { type: "item", itemIndex: 0 });
+  assert.equal(state.players[0].health, 3);
+});
+
+test("Burner Phone reveals a future shell only to its user", () => {
+  const state = gameWithTurn();
+  state.players[0].inventory = ["Burner Phone"];
+  state.chamber = ["blank", "live", "blank"];
+  state.liveRemaining = 1;
+  state.blankRemaining = 2;
+  performAction(state, "a", { type: "item", itemIndex: 0 });
+  assert.equal(getPlayerView(state, "a").events.some((event) => event.includes("future shell")), false);
+  assert.equal(getPlayerView(state, "b").knownCurrentShell, null);
+  assert.deepEqual(state.futureKnowledge.a, { 1: "live" });
+});
