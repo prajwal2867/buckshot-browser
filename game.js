@@ -244,6 +244,7 @@
     currentKnowledge(entity) {
       const key = this.entityKey(entity);
       if (this.knownShell[key]) return this.knownShell[key];
+      if (this.futureKnowledge[key][0]) return this.futureKnowledge[key][0];
       let live = this.liveRemaining;
       let blank = this.blankRemaining;
       for (const [position, shell] of Object.entries(this.futureKnowledge[key])) {
