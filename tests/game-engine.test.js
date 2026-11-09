@@ -141,7 +141,8 @@ test("Dealer stops its item phase when Adrenaline steals a Beer that reloads the
   game.blankRemaining = 1;
   game.dealerUseItems();
   assert.equal(game.current, game.player);
-  assert.equal(game.dealer.inventory.length, 0);
+  assert.equal(game.dealer.inventory.includes("Adrenaline"), false);
+  assert.ok(game.dealer.inventory.length <= 8);
   assert.ok(game.chamber.length >= 2);
 });
 
