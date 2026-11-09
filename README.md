@@ -39,7 +39,17 @@ The browser connects to the same-origin `/api/socket` endpoint using WebSocket t
 - Room and socket membership updates are atomic Redis operations.
 - Local development retains an in-memory room manager.
 
-PvP gameplay, server-authoritative ammunition and item logic, and the 60-second reconnect flow are the next phases. A Vercel deployment also needs its Upstash Redis integration configured before the online lobby can create rooms.
+## PvP match rules
+
+- The host starts a match after the second player is approved.
+- Both players start with 4 health; the first turn is randomized.
+- Each magazine contains 2–8 balanced live/blank shells. Players receive random items on reload, with an 8-item inventory cap.
+- Players may shoot themselves or their opponent. A blank self-shot keeps the turn; other shots pass it. A player reaching 0 health loses immediately.
+- All nine items are handled by the server: Magnifying Glass, Handcuffs, Beer, Cigarette Pack, Hand Saw, Adrenaline, Burner Phone, Inverter, and Expired Medicine.
+- The server validates whose turn it is and every action. Redis stores the full match state; each client receives a filtered view, so chamber order and the other player's private shell knowledge are never sent to the browser.
+- PvP state updates use an atomic compare-and-set in Redis to prevent two simultaneous actions from overwriting each other.
+
+The 60-second reconnect flow is still a later phase. A Vercel deployment also needs its Upstash Redis integration configured before online matches can start.
 
 ## Tests
 
