@@ -296,6 +296,7 @@ function getPlayerView(state, playerId) {
     status: state.status,
     players: state.players.map((p) => ({
       username: p.username,
+      isYou: p.id === playerId,
       health: p.health,
       maxHealth: p.maxHealth,
       inventory: [...p.inventory],
