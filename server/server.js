@@ -10,6 +10,8 @@ function createAppServer({ roomManager = new RoomManager() } = {}) {
   const app = express();
   const httpServer = http.createServer(app);
   const io = new Server(httpServer);
+  const expiryTimer = setInterval(() => roomManager.expire(), 60 * 1000);
+  expiryTimer.unref?.();
   const publicRoot = path.join(__dirname, "..");
 
   app.use(express.static(publicRoot, {
@@ -95,7 +97,7 @@ function createAppServer({ roomManager = new RoomManager() } = {}) {
     socket.on("disconnect", () => roomManager.disconnect(socket.id));
   });
 
-  return { app, httpServer, io, roomManager };
+  return { app, httpServer, io, roomManager, expiryTimer };
 }
 
 if (require.main === module) {
