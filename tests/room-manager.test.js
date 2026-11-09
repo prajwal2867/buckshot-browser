@@ -87,3 +87,23 @@ test("disconnecting the host removes its room", () => {
   manager.disconnect("host-1");
   assert.equal(manager.get("4827"), null);
 });
+
+test("a socket cannot create or request to join multiple rooms", () => {
+  const codes = ["4827", "9134"];
+  const manager = new RoomManager({ randomCode: () => codes.shift() });
+  manager.create({ socketId: "host-1", username: "HostPlayer" }, 100);
+  manager.create({ socketId: "host-2", username: "OtherHost" }, 101);
+
+  assert.throws(
+    () => manager.create({ socketId: "host-1", username: "HostPlayer" }, 102),
+    /already in a room/
+  );
+
+  const request = manager.requestJoin({
+    socketId: "guest-1", username: "GuestPlayer", code: "4827"
+  }, 103);
+  assert.equal(request.ok, true);
+  assert.equal(manager.requestJoin({
+    socketId: "guest-1", username: "GuestPlayer", code: "9134"
+  }, 104).error, "You are already in a room.");
+});
