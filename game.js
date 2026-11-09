@@ -217,7 +217,7 @@
       }).format(new Date(timestamp)) + " IST";
     }
 
-    nextIstMidnightAfterFortyEightHours(timestamp) {
+    nextIstBenefactorSlotAfterFortyEightHours(timestamp) {
       const target = timestamp + 48 * 60 * 60 * 1000;
       const parts = new Intl.DateTimeFormat("en-CA", {
         timeZone: "Asia/Kolkata",
@@ -228,6 +228,8 @@
       const part = (type) => Number(parts.find((entry) => entry.type === type).value);
       let midnight = Date.UTC(part("year"), part("month") - 1, part("day"), -5, -30);
       if (midnight < target) midnight += 24 * 60 * 60 * 1000;
+      const istDateNumber = Math.floor((midnight + 5.5 * 60 * 60 * 1000) / (24 * 60 * 60 * 1000));
+      if (istDateNumber % 2 !== 0) midnight += 24 * 60 * 60 * 1000;
       return midnight;
     }
 
@@ -247,7 +249,7 @@
       }
       this.balance += 500;
       this.saveBalance();
-      const nextPayout = this.nextIstMidnightAfterFortyEightHours(now);
+      const nextPayout = this.nextIstBenefactorSlotAfterFortyEightHours(now);
       try {
         window.localStorage?.setItem("buckshot-browser.benefactor-next-available", String(nextPayout));
       } catch {
@@ -893,7 +895,7 @@
           available ? "2. NOT NOW — KEEP PLAYING" : "NEXT LIFELINE: " + this.formatIst(nextAvailable),
           "",
           '<span class="separator">---</span>'
-        ].join("\\n");
+        ].join("\n");
         promptLabel.textContent = available ? "1 to claim / 2 to decline:" : "2 to continue:";
         input.disabled = false;
         if (!input.readOnly) input.focus();
