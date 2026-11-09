@@ -61,7 +61,7 @@
 
     makeEntity(name) {
       return {
-        name, health: 0, maxHealth: 0, fadedHealth: 0,
+        name, health: 0, maxHealth: 0, fadedHealth: 0, cutWire: false, dead: false,
         inventory: [], handcuffed: false
       };
     }
@@ -155,19 +155,15 @@
       this.isSawedOff = false;
       this.knownShell = { player: null, dealer: null };
       this.futureKnowledge = { player: {}, dealer: {} };
+      const sharedHealth = this.gameMode === "story" ? (this.stage === 1 ? 2 : 4) : randomInt(2, 4);
       for (const entity of [this.player, this.dealer]) {
         entity.inventory = [];
         entity.handcuffed = false;
-        if (this.gameMode === "story") {
-          entity.maxHealth = this.stage === 1 ? 2 : 4;
-          entity.health = entity.maxHealth;
-          entity.fadedHealth = this.stage === 3 ? 2 : 0;
-        } else {
-          const hp = randomInt(2, 4);
-          entity.maxHealth = hp;
-          entity.health = hp;
-          entity.fadedHealth = 0;
-        }
+        entity.cutWire = false;
+        entity.dead = false;
+        entity.maxHealth = sharedHealth;
+        entity.health = sharedHealth;
+        entity.fadedHealth = this.gameMode === "story" && this.stage === 3 ? 2 : 0;
       }
       this.current = this.player;
       this.opponent = this.dealer;
@@ -189,9 +185,9 @@
       const count = this.itemCountForReload();
       const pool = this.gameMode === "story" ? BASE_ITEMS : ALL_ITEMS;
       for (const entity of [this.player, this.dealer]) {
-        entity.inventory = Array.from({ length: count }, () => pick(pool));
+        for (let i = 0; i < count && entity.inventory.length < 8; i++) entity.inventory.push(pick(pool));
       }
-      if (count) this.addEvent(`Both sides receive ${count} item(s).`);
+      if (count) this.addEvent(`Both sides receive up to ${count} item(s), subject to the 8-slot limit.`);
     }
 
     reload() {
@@ -207,9 +203,14 @@
       } else if (this.gameMode === "story" && this.stage === 2 && this.stageReloads === 1) {
         shells = ["live", "blank"];
       } else {
-        const total = this.gameMode === "double" ? randomInt(2, 8) : randomInt(2, 8);
-        const live = randomInt(1, total - 1);
-        shells = [...Array(live).fill("live"), ...Array(total - live).fill("blank")];
+        const total = randomInt(2, 8);
+        let live = Math.floor(total / 2);
+        let blank = Math.floor(total / 2);
+        if (total % 2) {
+          if (Math.random() < 0.5) live++;
+          else blank++;
+        }
+        shells = [...Array(live).fill("live"), ...Array(blank).fill("blank")];
       }
 
       this.shuffle(shells);
@@ -241,7 +242,18 @@
     }
 
     currentKnowledge(entity) {
-      return this.knownShell[this.entityKey(entity)] || this.inferCurrentShell();
+      const key = this.entityKey(entity);
+      if (this.knownShell[key]) return this.knownShell[key];
+      let live = this.liveRemaining;
+      let blank = this.blankRemaining;
+      for (const [position, shell] of Object.entries(this.futureKnowledge[key])) {
+        if (Number(position) <= 0) continue;
+        if (shell === "live") live--;
+        else blank--;
+      }
+      if (live === 0) return "blank";
+      if (blank === 0) return "live";
+      return null;
     }
 
     drawShell() {
@@ -249,8 +261,15 @@
       if (!shell) return null;
       if (shell === "live") this.liveRemaining--;
       else this.blankRemaining--;
+      for (const key of ["player", "dealer"]) {
+        const shifted = {};
+        for (const [position, known] of Object.entries(this.futureKnowledge[key])) {
+          const next = Number(position) - 1;
+          if (next >= 0) shifted[next] = known;
+        }
+        this.futureKnowledge[key] = shifted;
+      }
       this.knownShell = { player: null, dealer: null };
-      this.futureKnowledge = { player: {}, dealer: {} };
       return shell;
     }
 
@@ -273,14 +292,20 @@
     }
 
     damage(entity, amount) {
-      let remaining = amount;
-      const normal = Math.min(entity.health, remaining);
-      entity.health -= normal;
-      remaining -= normal;
-      if (remaining > 0) entity.fadedHealth = Math.max(0, entity.fadedHealth - remaining);
+      for (let i = 0; i < amount; i++) {
+        if (this.gameMode === "story" && this.stage === 3 && entity.cutWire) {
+          entity.dead = true;
+        } else if (entity.health > 0) {
+          entity.health--;
+          if (this.gameMode === "story" && this.stage === 3 && entity.health === 0) entity.cutWire = true;
+        } else {
+          entity.dead = true;
+        }
+      }
     }
 
     heal(entity, amount) {
+      if (entity.cutWire || entity.dead) return 0;
       const healed = Math.min(amount, entity.maxHealth - entity.health);
       entity.health += healed;
       return healed;
@@ -313,8 +338,8 @@
     }
 
     checkStageEnd() {
-      const playerDead = this.player.health + this.player.fadedHealth <= 0;
-      const dealerDead = this.dealer.health + this.dealer.fadedHealth <= 0;
+      const playerDead = this.player.dead || (this.stage < 3 && this.player.health <= 0);
+      const dealerDead = this.dealer.dead || (this.stage < 3 && this.dealer.health <= 0);
       if (!playerDead && !dealerDead) return false;
 
       const playerWon = !playerDead && dealerDead;
@@ -470,6 +495,7 @@
           return true;
         case "Beer": {
           const ejected = this.drawShell();
+          this.isSawedOff = false;
           this.addEvent(`${owner.name} racks the shotgun and ejects a ${ejected.toUpperCase()} shell.`);
           if (!this.chamber.length) this.reload();
           return true;
@@ -631,7 +657,7 @@
       }
 
       const health = (entity) => entity.fadedHealth
-        ? `${entity.health} + ${entity.fadedHealth} faded`
+        ? `${entity.health} + ${entity.fadedHealth} cracked${entity.cutWire ? " (wire cut)" : ""}`
         : String(entity.health);
       const lines = [
         `<span class="title">==== ${this.gameMode === "story" ? "STORY" : "DOUBLE OR NOTHING"} | STAGE ${this.stage} | RELOAD ${this.reloadNumber} ====</span>`,
