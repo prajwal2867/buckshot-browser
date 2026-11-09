@@ -1,0 +1,17 @@
+{
+  "name": "buckshot-browser",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Buckshot Roulette browser game with multiplayer room infrastructure",
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}

@@ -8,6 +8,68 @@
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
+    <header class="site-header">
+      <span class="site-brand">BUCKSHOT ROULETTE</span>
+      <button id="multiplayer-open" type="button">Multiplayer</button>
+    </header>
+
+    <section id="multiplayer-panel" class="multiplayer-panel" hidden aria-labelledby="multiplayer-title">
+      <div class="multiplayer-heading">
+        <div>
+          <p class="eyebrow">ONLINE PLAY</p>
+          <h1 id="multiplayer-title">Multiplayer</h1>
+        </div>
+        <button id="multiplayer-close" class="quiet-button" type="button" aria-label="Close multiplayer">×</button>
+      </div>
+
+      <div id="multiplayer-identity">
+        <label for="multiplayer-username">Choose your username</label>
+        <div class="inline-controls">
+          <input id="multiplayer-username" maxlength="16" minlength="3" autocomplete="nickname"
+            placeholder="e.g. NightWolf" aria-describedby="username-help">
+          <button id="username-save" type="button">Save</button>
+        </div>
+        <p id="username-help" class="help-text">3–16 characters: letters, numbers, _ or -.</p>
+      </div>
+
+      <div id="multiplayer-lobby" hidden>
+        <p class="identity-line">Playing as <strong id="multiplayer-player-name"></strong>
+          <button id="username-change" class="text-button" type="button">Change</button>
+        </p>
+        <div class="multiplayer-actions">
+          <button id="room-create" type="button">Create room</button>
+          <form id="room-join-form">
+            <label for="room-code">Join with a code</label>
+            <div class="inline-controls">
+              <input id="room-code" inputmode="numeric" autocomplete="one-time-code"
+                maxlength="4" pattern="[0-9]{4}" placeholder="0000" aria-label="Four-digit room code">
+              <button type="submit">Join</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div id="multiplayer-room" hidden>
+        <p id="multiplayer-status" class="status-line" role="status">Connecting...</p>
+        <div id="room-code-card" hidden>
+          <p class="eyebrow">ROOM CODE</p>
+          <strong id="room-code-display" class="room-code"></strong>
+          <p class="help-text">Share this code. The other player must be approved before entering.</p>
+        </div>
+        <div id="join-request" class="join-request" hidden>
+          <p><strong id="join-request-name"></strong> wants to join your room.</p>
+          <div class="inline-controls">
+            <button id="join-decline" class="secondary-button" type="button">Decline</button>
+            <button id="join-accept" type="button">Accept</button>
+          </div>
+        </div>
+        <div id="room-players" class="room-players" hidden></div>
+        <button id="room-leave" class="secondary-button" type="button">Leave room</button>
+      </div>
+
+      <p id="multiplayer-message" class="multiplayer-message" role="status" aria-live="polite"></p>
+    </section>
+
     <main aria-label="Buckshot Roulette">
       <div id="screen" aria-live="polite"></div>
       <form id="command-form" autocomplete="off">
@@ -33,6 +95,8 @@
         <button type="button" data-key="enter" class="enter-key">Enter</button>
       </div>
     </main>
+    <script src="/socket.io/socket.io.js"></script>
     <script src="game.js"></script>
+    <script src="multiplayer.js"></script>
   </body>
 </html>
