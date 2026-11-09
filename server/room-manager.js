@@ -13,10 +13,12 @@ class RoomManager {
     this.ttlMs = ttlMs;
     this.randomCode = randomCode || (() => String(1000 + crypto.randomInt(0, 9000)));
     this.rooms = new Map();
+    this.socketRooms = new Map();
   }
 
   create(host, now = Date.now()) {
     this.expire(now);
+    if (this.socketRooms.has(host.socketId)) throw new Error("You are already in a room.");
     let code;
     for (let attempt = 0; attempt < 9000; attempt++) {
       code = this.randomCode();
@@ -35,6 +37,7 @@ class RoomManager {
       updatedAt: now
     };
     this.rooms.set(code, room);
+    this.socketRooms.set(host.socketId, { code, role: "host" });
     return room;
   }
 
@@ -44,10 +47,12 @@ class RoomManager {
     const room = this.rooms.get(String(code));
     if (!room || room.status !== "waiting") return { ok: false, error: "Invalid code." };
     if (room.host.socketId === socketId) return { ok: false, error: "You cannot join your own room." };
+    if (this.socketRooms.has(socketId)) return { ok: false, error: "You are already in a room." };
     if (room.pending) return { ok: false, error: "This room already has a pending request." };
 
     const requestId = crypto.randomUUID();
     room.pending = { requestId, socketId, username };
+    this.socketRooms.set(socketId, { code: room.code, role: "pending" });
     room.updatedAt = now;
     return {
       ok: true,
@@ -67,11 +72,13 @@ class RoomManager {
 
     const pending = room.pending;
     room.pending = null;
+    this.socketRooms.delete(pending.socketId);
     room.updatedAt = now;
 
     if (!accepted) return { ok: true, accepted: false, guestSocketId: pending.socketId };
 
     room.guest = { socketId: pending.socketId, username: pending.username };
+    this.socketRooms.set(pending.socketId, { code: room.code, role: "guest" });
     room.status = "lobby";
     return {
       ok: true,
@@ -88,26 +95,38 @@ class RoomManager {
   }
 
   disconnect(socketId) {
-    for (const [code, room] of this.rooms) {
-      if (room.pending?.socketId === socketId) {
-        room.pending = null;
-        room.updatedAt = Date.now();
-      }
-      if (room.host.socketId === socketId) {
-        this.rooms.delete(code);
-        continue;
-      }
-      if (room.guest?.socketId === socketId) {
-        room.guest = null;
-        room.status = "waiting";
-        room.updatedAt = Date.now();
-      }
+    const membership = this.socketRooms.get(socketId);
+    if (!membership) return;
+    this.socketRooms.delete(socketId);
+
+    const room = this.rooms.get(membership.code);
+    if (!room) return;
+
+    if (membership.role === "host") {
+      if (room.guest) this.socketRooms.delete(room.guest.socketId);
+      if (room.pending) this.socketRooms.delete(room.pending.socketId);
+      this.rooms.delete(membership.code);
+      return;
+    }
+
+    if (membership.role === "guest" && room.guest?.socketId === socketId) {
+      room.guest = null;
+      room.status = "waiting";
+      room.updatedAt = Date.now();
+    } else if (membership.role === "pending" && room.pending?.socketId === socketId) {
+      room.pending = null;
+      room.updatedAt = Date.now();
     }
   }
 
   expire(now = Date.now()) {
     for (const [code, room] of this.rooms) {
-      if (now - room.updatedAt >= this.ttlMs) this.rooms.delete(code);
+      if (now - room.updatedAt >= this.ttlMs) {
+        this.socketRooms.delete(room.host.socketId);
+        if (room.guest) this.socketRooms.delete(room.guest.socketId);
+        if (room.pending) this.socketRooms.delete(room.pending.socketId);
+        this.rooms.delete(code);
+      }
     }
   }
 }

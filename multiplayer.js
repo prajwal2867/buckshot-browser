@@ -67,7 +67,7 @@
       setMessage("Multiplayer needs the online server. Start the app with npm start; opening index.html directly only supports single-player.");
       return null;
     }
-    socket = window.io();
+    socket = window.io({ path: "/api/socket", addTrailingSlash: false, transports: ["websocket"] });
     socket.on("connect", () => setMessage("Connected to multiplayer server."));
     socket.on("disconnect", () => setMessage("Connection lost. Room state may be unavailable until the server connection returns."));
     socket.on("connect_error", () => setMessage("Could not connect to the multiplayer server."));
