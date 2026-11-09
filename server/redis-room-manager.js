@@ -21,7 +21,7 @@ const REQUEST_JOIN = `
   if room.status ~= "waiting" then return {"error", "Invalid code."} end
   if room.host.socketId == ARGV[1] then return {"error", "You cannot join your own room."} end
   if redis.call("EXISTS", KEYS[2]) == 1 then return {"error", "You are already in a room."} end
-  if room.pending then return {"error", "This room already has a pending request."} end
+  if room.pending ~= nil and room.pending ~= cjson.null then return {"error", "This room already has a pending request."} end
 
   room.pending = cjson.decode(ARGV[2])
   room.updatedAt = tonumber(ARGV[3])
@@ -34,19 +34,19 @@ const RESPOND = `
   local raw = redis.call("GET", KEYS[1])
   if not raw then return {"error", "That join request is no longer available."} end
   local room = cjson.decode(raw)
-  if room.host.socketId ~= ARGV[1] or not room.pending or room.pending.requestId ~= ARGV[2] then
+  if room.host.socketId ~= ARGV[1] or room.pending == nil or room.pending == cjson.null or room.pending.requestId ~= ARGV[2] then
     return {"error", "That join request is no longer available."}
   end
 
   local guest = room.pending
-  redis.call("DEL", KEYS[2])
+  redis.call("DEL", ARGV[6] .. guest.socketId)
   room.pending = cjson.null
   room.updatedAt = tonumber(ARGV[4])
 
   if ARGV[3] == "1" then
     room.guest = {socketId = guest.socketId, username = guest.username}
     room.status = "lobby"
-    redis.call("SET", KEYS[3], "guest:" .. room.code, "EX", ARGV[5])
+    redis.call("SET", ARGV[6] .. guest.socketId, "guest:" .. room.code, "EX", ARGV[5])
   end
 
   redis.call("SET", KEYS[1], cjson.encode(room), "EX", ARGV[5])
@@ -69,16 +69,16 @@ const DISCONNECT = `
   local room = cjson.decode(raw)
 
   if role == "host" and room.host.socketId == ARGV[2] then
-    if room.guest then redis.call("DEL", ARGV[3] .. room.guest.socketId) end
-    if room.pending then redis.call("DEL", ARGV[3] .. room.pending.socketId) end
+    if room.guest ~= nil and room.guest ~= cjson.null then redis.call("DEL", ARGV[3] .. room.guest.socketId) end
+    if room.pending ~= nil and room.pending ~= cjson.null then redis.call("DEL", ARGV[3] .. room.pending.socketId) end
     redis.call("DEL", roomKey)
     return 1
   end
 
-  if role == "guest" and room.guest and room.guest.socketId == ARGV[2] then
+  if role == "guest" and room.guest ~= nil and room.guest ~= cjson.null and room.guest.socketId == ARGV[2] then
     room.guest = cjson.null
     room.status = "waiting"
-  elseif role == "pending" and room.pending and room.pending.socketId == ARGV[2] then
+  elseif role == "pending" and room.pending ~= nil and room.pending ~= cjson.null and room.pending.socketId == ARGV[2] then
     room.pending = cjson.null
   else
     return 0
@@ -166,15 +166,14 @@ class RedisRoomManager {
   async respond({ hostSocketId, code, requestId, accepted }, now = Date.now()) {
     const response = await this.redis.eval(
       RESPOND,
-      3,
+      1,
       this.roomKey(String(code)),
-      this.socketKeyForPending(code, requestId),
-      this.socketKeyForGuestPlaceholder(code),
       hostSocketId,
       requestId,
       accepted ? "1" : "0",
       now,
-      this.ttlSeconds
+      this.ttlSeconds,
+      this.keyPrefix + "socket:"
     );
     if (response[0] !== "ok") return { ok: false, error: response[1] };
 
@@ -189,16 +188,6 @@ class RedisRoomManager {
       guest: { username: response[5], socketId: response[6] },
       guestSocketId: response[6]
     };
-  }
-
-  // These key names are resolved inside Lua from the pending socket's ID. The
-  // request ID is deliberately not used as a Redis key or trusted as identity.
-  socketKeyForPending(code, requestId) {
-    return `${this.keyPrefix}pending-room:${code}:${requestId}`;
-  }
-
-  socketKeyForGuestPlaceholder(code) {
-    return `${this.keyPrefix}guest-room:${code}`;
   }
 
   async get(code) {
