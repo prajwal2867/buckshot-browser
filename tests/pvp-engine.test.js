@@ -152,7 +152,8 @@ test("Burner Phone reveals a future shell only to its user", () => {
   state.liveRemaining = 1;
   state.blankRemaining = 2;
   performAction(state, "a", { type: "item", itemIndex: 0 });
-  assert.equal(getPlayerView(state, "a").events.some((event) => event.includes("future shell")), false);
+  assert.equal(getPlayerView(state, "a").events.some((event) => event.includes("future shell")), true);
+  assert.equal(getPlayerView(state, "b").events.some((event) => event.includes("future shell")), false);
   assert.equal(getPlayerView(state, "b").knownCurrentShell, null);
   assert.deepEqual(state.futureKnowledge.a, { 1: "live" });
 });
