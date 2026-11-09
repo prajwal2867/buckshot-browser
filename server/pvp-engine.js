@@ -148,7 +148,7 @@ function validItem(state, player, item) {
   if (item === "Handcuffs" && other.handcuffed) return false;
   if (item === "Hand Saw" && state.sawedOff) return false;
   if (item === "Cigarette Pack" && player.health >= player.maxHealth) return false;
-  if (item === "Burner Phone" && state.chamber.length < 2) return false;
+  if (item === "Burner Phone" && !state.chamber.some((_, index) => index > 0 && !state.futureKnowledge[player.id]?.[index])) return false;
   if (item === "Adrenaline") {
     return other.inventory.some((candidate) => candidate !== "Adrenaline" && validItem(state, other, candidate));
   }
