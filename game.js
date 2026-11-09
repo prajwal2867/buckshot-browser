@@ -50,6 +50,7 @@
       this.gameOver = false;
       this.busy = false;
       this.timer = null;
+      this.stealTimer = null;
       this.setNumber = 1;
       this.winnings = 0;
       this.setStartedAt = 0;
@@ -136,7 +137,9 @@
 
     reset() {
       if (this.timer) clearTimeout(this.timer);
+      if (this.stealTimer) window.clearTimeout(this.stealTimer);
       this.timer = null;
+      this.stealTimer = null;
       this.player = this.makeEntity("Player");
       this.dealer = this.makeEntity("Dealer");
       this.current = this.player;
@@ -469,6 +472,8 @@
         this.render();
         return;
       }
+      if (this.stealTimer) window.clearTimeout(this.stealTimer);
+      this.stealTimer = null;
       const owner = this.stealOwner;
       const victim = owner === this.player ? this.dealer : this.player;
       const victimIndex = victim.inventory.indexOf(item);
@@ -492,6 +497,17 @@
     consumeItem(owner, item) {
       const index = owner.inventory.indexOf(item);
       if (index >= 0) owner.inventory.splice(index, 1);
+    }
+
+    expireAdrenaline() {
+      if (this.mode !== "steal" || this.stealOwner !== this.player) return;
+      this.stealTimer = null;
+      this.consumeItem(this.player, "Adrenaline");
+      this.stealableItems = [];
+      this.stealOwner = null;
+      this.mode = "action";
+      this.addEvent("Adrenaline expired. No item was stolen.");
+      this.afterPlayerCommand();
     }
 
     useItem(owner, item, stolen = false) {
@@ -577,8 +593,9 @@
           if (owner === this.player && !stolen) {
             this.stealableItems = candidates;
             this.stealOwner = owner;
-            this.addEvent("Choose an opponent item to steal:");
+            this.addEvent("Choose an opponent item to steal within 5 seconds:");
             candidates.forEach((candidate, i) => this.addEvent(`${i + 1}. ${candidate}`));
+            this.stealTimer = window.setTimeout(() => this.expireAdrenaline(), 5000);
             return "steal";
           }
           const chosen = this.chooseDealerSteal(candidates);
