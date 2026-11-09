@@ -343,8 +343,8 @@
     }
 
     checkStageEnd() {
-      const playerDead = this.player.dead || (this.stage < 3 && this.player.health <= 0);
-      const dealerDead = this.dealer.dead || (this.stage < 3 && this.dealer.health <= 0);
+      const playerDead = this.player.dead || (this.player.health <= 0 && (this.gameMode === "double" || this.stage < 3));
+      const dealerDead = this.dealer.dead || (this.dealer.health <= 0 && (this.gameMode === "double" || this.stage < 3));
       if (!playerDead && !dealerDead) return false;
 
       const playerWon = !playerDead && dealerDead;
