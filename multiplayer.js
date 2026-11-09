@@ -50,6 +50,17 @@
     if (!username) elements.username.focus();
   }
 
+  function emitWhenConnected(eventName, payload) {
+    const connection = ensureSocket();
+    if (!connection) return false;
+    if (connection.connected) connection.emit(eventName, payload);
+    else {
+      setMessage("Connecting to multiplayer server...");
+      connection.once("connect", () => connection.emit(eventName, payload));
+    }
+    return true;
+  }
+
   function ensureSocket() {
     if (socket) return socket;
     if (typeof window.io !== "function") {
@@ -148,13 +159,7 @@
   });
 
   elements.create.addEventListener("click", () => {
-    const connection = ensureSocket();
-    if (!connection) return;
-    if (!connection.connected) {
-      setMessage("Connecting to server. Try again in a moment.");
-      return;
-    }
-    connection.emit("room:create", { username: getUsername() });
+    emitWhenConnected("room:create", { username: getUsername() });
   });
 
   elements.joinForm.addEventListener("submit", (event) => {
@@ -164,13 +169,7 @@
       setMessage("Enter a valid four-digit room code.");
       return;
     }
-    const connection = ensureSocket();
-    if (!connection) return;
-    if (!connection.connected) {
-      setMessage("Connecting to server. Try again in a moment.");
-      return;
-    }
-    connection.emit("room:join", { code, username: getUsername() });
+    emitWhenConnected("room:join", { code, username: getUsername() });
   });
 
   elements.accept.addEventListener("click", () => {
