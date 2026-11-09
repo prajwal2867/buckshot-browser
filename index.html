@@ -10,17 +10,14 @@
   <body>
     <header class="site-header">
       <span class="site-brand">BUCKSHOT ROULETTE</span>
-      <button id="multiplayer-open" type="button">Multiplayer</button>
+      <nav class="mode-switch" aria-label="Game modes">
+        <button id="story-open" class="mode-button active" type="button" aria-pressed="true">Story Mode</button>
+        <button id="multiplayer-open" class="mode-button" type="button" aria-pressed="false">Multiplayer</button>
+      </nav>
     </header>
 
     <section id="multiplayer-panel" class="multiplayer-panel" hidden aria-labelledby="multiplayer-title">
-      <div class="multiplayer-heading">
-        <div>
-          <p class="eyebrow">ONLINE PLAY</p>
-          <h1 id="multiplayer-title">Multiplayer</h1>
-        </div>
-        <button id="multiplayer-close" class="quiet-button" type="button" aria-label="Close multiplayer">×</button>
-      </div>
+      <h1 id="multiplayer-title" class="terminal-title">BUCKSHOT ROULETTE - MULTIPLAYER</h1>
 
       <div id="multiplayer-identity">
         <label for="multiplayer-username">Choose your username</label>
@@ -85,7 +82,7 @@
       <p id="multiplayer-message" class="multiplayer-message" role="status" aria-live="polite"></p>
     </section>
 
-    <main aria-label="Buckshot Roulette">
+    <main id="story-mode" aria-label="Buckshot Roulette Story Mode">
       <div id="screen" aria-live="polite"></div>
       <form id="command-form" autocomplete="off">
         <label id="prompt-label" for="command-input">Command:</label>
