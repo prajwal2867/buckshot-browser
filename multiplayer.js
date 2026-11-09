@@ -17,7 +17,8 @@
     identity: byId("multiplayer-identity"), username: byId("multiplayer-username"),
     saveUsername: byId("username-save"), changeUsername: byId("username-change"),
     lobby: byId("multiplayer-lobby"), playerName: byId("multiplayer-player-name"),
-    create: byId("room-create"), joinForm: byId("room-join-form"), joinCode: byId("room-code"),
+    create: byId("room-create"), joinOpen: byId("room-join-open"),
+    joinForm: byId("room-join-form"), joinCode: byId("room-code"),
     room: byId("multiplayer-room"), status: byId("multiplayer-status"),
     message: byId("multiplayer-message"), codeCard: byId("room-code-card"),
     codeDisplay: byId("room-code-display"), request: byId("join-request"),
@@ -48,6 +49,8 @@
     el.identity.hidden = Boolean(username);
     el.lobby.hidden = !username;
     el.room.hidden = true;
+    el.joinForm.hidden = true;
+    el.joinOpen.hidden = false;
     el.playerName.textContent = username;
     if (!username) el.username.focus();
   }
@@ -71,20 +74,20 @@
       el.room.hidden = false;
       el.lobby.hidden = true;
       el.status.textContent = "WAITING ...";
-      el.codeCard.hidden = false;
-      el.codeDisplay.textContent = data.code.split("").join(" ");
+      el.codeCard.hidden = true;
       el.request.hidden = true;
       el.players.hidden = true;
       el.start.hidden = true;
       el.game.hidden = true;
-      setMessage("Room created. Share the four-digit code.");
+      el.leave.textContent = "LEAVE ROOM [ 1 ]";
+      setMessage("");
     });
     socket.on("room:join-pending", (data) => {
       activeRoomCode = data.code;
       isHost = false;
       el.room.hidden = false;
       el.lobby.hidden = true;
-      el.status.textContent = "WAITING FOR HOST APPROVAL ...";
+      el.status.textContent = "WAITING ...";
       el.codeCard.hidden = true;
       setMessage("Request sent to " + data.hostUsername + ".");
     });
@@ -92,6 +95,8 @@
       pendingRequest = data;
       el.request.hidden = false;
       el.requestName.textContent = data.username;
+      el.codeCard.hidden = false;
+      el.leave.textContent = "LEAVE ROOM [ 3 ]";
       setMessage("");
     });
     socket.on("room:declined", () => {
@@ -103,12 +108,13 @@
     socket.on("room:player-joined", (data) => {
       pendingRequest = null;
       el.request.hidden = true;
+      el.codeCard.hidden = true;
       el.players.hidden = false;
       el.players.textContent = data.host.username + " VS " + data.guest.username;
       el.status.textContent = "";
       el.start.hidden = false;
-      el.start.textContent = "Start [ 1 ]";
-      el.leave.textContent = "Leave [ 2 ]";
+      el.start.textContent = "START [ 1 ]";
+      el.leave.textContent = "LEAVE [ 2 ]";
       setMessage("");
     });
     socket.on("room:joined", (data) => {
@@ -121,14 +127,14 @@
       el.request.hidden = true;
       el.players.hidden = false;
       el.players.textContent = data.host.username + " VS " + data.guest.username;
-      el.status.textContent = "WAITING FOR HOST ...";
+      el.status.textContent = "WAITING ...";
       el.start.hidden = true;
-      el.leave.textContent = "Leave room [ 1 ]";
+      el.leave.textContent = "LEAVE ROOM [ 1 ]";
       setMessage("");
     });
     socket.on("game:started", () => {
       el.start.hidden = true;
-      el.status.textContent = "Match in progress.";
+      el.status.textContent = "MATCH IN PROGRESS";
       setMessage("The match has started.");
     });
     socket.on("game:state", (state) => {
@@ -247,6 +253,11 @@
     showIdentity();
   });
   el.create.addEventListener("click", () => emitWhenConnected("room:create", { username: getUsername() }));
+  el.joinOpen.addEventListener("click", () => {
+    el.joinOpen.hidden = true;
+    el.joinForm.hidden = false;
+    el.joinCode.focus();
+  });
   el.joinForm.addEventListener("submit", (event) => {
     event.preventDefault();
     const code = el.joinCode.value.trim();
