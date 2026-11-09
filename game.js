@@ -107,7 +107,7 @@
         this.balance -= amount;
         this.saveBalance();
         this.mode = "start";
-        this.addEvent(amount ? `Bet placed: ${amount.toLocaleString()}.` : "Free play selected. No bet placed.");
+        this.addEvent(amount ? "Bet placed: $" + amount.toLocaleString() + "." : "Free play selected. No bet placed.");
         this.render();
         return;
       }
@@ -179,9 +179,9 @@
       if (playerWon) {
         const payout = this.betAmount * 2;
         this.balance += payout;
-        this.addEvent(`BET WON: +${this.betAmount.toLocaleString()} profit. Payout: ${payout.toLocaleString()}.`);
+        this.addEvent("BET WON: +$" + this.betAmount.toLocaleString() + " profit. Payout: $" + payout.toLocaleString() + ".");
       } else {
-        this.addEvent(`BET LOST: -${this.betAmount.toLocaleString()}.`);
+        this.addEvent("BET LOST: -$" + this.betAmount.toLocaleString() + ".");
       }
       this.saveBalance();
     }
@@ -516,7 +516,7 @@
       this.gameOver = true;
       this.mode = "restart";
       this.settleBet(true);
-      this.addEvent(`You cash out with ${this.winnings.toLocaleString()}.`);
+      this.addEvent("You cash out with $" + this.winnings.toLocaleString() + ".");
       this.render();
     }
 
