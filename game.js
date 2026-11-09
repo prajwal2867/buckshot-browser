@@ -34,8 +34,11 @@
       this.dealer = this.makeEntity("Dealer");
       this.current = this.player;
       this.opponent = this.dealer;
-      this.mode = "start";
+      this.mode = "bet";
       this.gameMode = "story";
+      this.balance = this.loadBalance();
+      this.betAmount = 0;
+      this.betSettled = false;
       this.doubleUnlocked = this.loadDoubleOrNothingUnlock();
       this.stage = 1;
       this.reloadNumber = 0;
@@ -87,6 +90,27 @@
 
     submit(raw) {
       const command = String(raw).trim().toLowerCase();
+      if (this.mode === "bet") {
+        if (!/^\d+$/.test(command)) {
+          this.addEvent("Enter a whole-number bet, or 0 to play without betting.");
+          this.render();
+          return;
+        }
+        const amount = Number(command);
+        if (!Number.isSafeInteger(amount) || amount < 0 || amount > this.balance) {
+          this.addEvent(`Choose an amount between 0 and ${this.balance.toLocaleString()}.`);
+          this.render();
+          return;
+        }
+        this.betAmount = amount;
+        this.betSettled = false;
+        this.balance -= amount;
+        this.saveBalance();
+        this.mode = "start";
+        this.addEvent(amount ? `Bet placed: ${amount.toLocaleString()}.` : "Free play selected. No bet placed.");
+        this.render();
+        return;
+      }
       if (this.mode === "start") {
         if (command === "2" && !this.doubleUnlocked) {
           this.addEvent("Double or Nothing is locked. Win Story Mode once to unlock it.");
@@ -124,6 +148,42 @@
       else if (command === "3") this.openInventory();
       else this.addEvent("Choose 1, 2, or 3.");
       this.afterPlayerCommand();
+    }
+
+    loadBalance() {
+      try {
+        const stored = window.localStorage?.getItem("buckshot-browser.balance");
+        if (stored === null || stored === undefined) return 1000;
+        const saved = Number(stored);
+        return Number.isSafeInteger(saved) && saved >= 0 ? saved : 1000;
+      } catch {
+        return 1000;
+      }
+    }
+
+    saveBalance() {
+      try {
+        window.localStorage?.setItem("buckshot-browser.balance", String(this.balance));
+      } catch {
+        // The wallet remains available for this session if storage is blocked.
+      }
+    }
+
+    settleBet(playerWon) {
+      if (this.betSettled) return;
+      this.betSettled = true;
+      if (!this.betAmount) {
+        this.addEvent("No wager was placed. Your balance is unchanged.");
+        return;
+      }
+      if (playerWon) {
+        const payout = this.betAmount * 2;
+        this.balance += payout;
+        this.addEvent(`BET WON: +${this.betAmount.toLocaleString()} profit. Payout: ${payout.toLocaleString()}.`);
+      } else {
+        this.addEvent(`BET LOST: -${this.betAmount.toLocaleString()}.`);
+      }
+      this.saveBalance();
     }
 
     loadDoubleOrNothingUnlock() {
@@ -174,7 +234,9 @@
       this.results = [];
       this.gameOver = false;
       this.busy = false;
-      this.mode = "start";
+      this.mode = "bet";
+      this.betAmount = 0;
+      this.betSettled = false;
       this.render();
     }
 
@@ -393,17 +455,20 @@
           this.mode = "restart";
           this.unlockDoubleOrNothing();
           this.addEvent("You survived Story Mode. The briefcase is yours.");
+          this.settleBet(true);
           this.addEvent(`Final Story Mode cash: ${this.storyCash().toLocaleString()}.`);
         } else {
           this.gameOver = true;
           this.mode = "restart";
           this.addEvent("The Dealer wins. You did not survive the final stage.");
+          this.settleBet(false);
           this.addEvent(`Final Story Mode cash: ${this.storyCash().toLocaleString()}.`);
         }
       } else if (!playerWon) {
         this.gameOver = true;
         this.mode = "restart";
         this.winnings = 0;
+        this.settleBet(false);
         this.addEvent("Run over. Double or Nothing pays nothing when you lose.");
       } else if (this.stage < 3) {
         this.advanceStage();
@@ -450,7 +515,8 @@
     finishDoubleRun() {
       this.gameOver = true;
       this.mode = "restart";
-      this.addEvent(`You cash out with $${this.winnings.toLocaleString()}.`);
+      this.settleBet(true);
+      this.addEvent(`You cash out with ${this.winnings.toLocaleString()}.`);
       this.render();
     }
 
@@ -722,9 +788,28 @@
     }
 
     render() {
+      if (this.mode === "bet") {
+        screen.innerHTML = [
+          '<span class="title">BUCKSHOT ROULETTE</span>', "",
+          `CURRENT BALANCE: ${this.balance.toLocaleString()}`, "",
+          "PLACE YOUR BET",
+          "Enter the amount you want to wager.",
+          "Enter 0 to play without bets.",
+          `MAXIMUM BET: ${this.balance.toLocaleString()}`, "",
+          '<span class="separator">---</span>'
+        ].join("\n");
+        promptLabel.textContent = "Bet amount:";
+        input.disabled = false;
+        if (!input.readOnly) input.focus();
+        keypadButtons.forEach((b) => b.disabled = false);
+        return;
+      }
+
       if (this.mode === "start") {
         screen.innerHTML = [
           '<span class="title">BUCKSHOT ROULETTE</span>', "",
+          `CURRENT BALANCE: ${this.balance.toLocaleString()}`,
+          `YOUR BET: ${this.betAmount ? "$" + this.betAmount.toLocaleString() : "NONE"}`, "",
           "1. Story Mode",
           this.doubleUnlocked ? "2. Double or Nothing" : "2. Double or Nothing (locked)",
           "",
@@ -746,9 +831,12 @@
       const lines = [
         `<span class="title">==== ${this.gameMode === "story" ? "STORY" : "DOUBLE OR NOTHING"} | STAGE ${this.stage} | RELOAD ${this.reloadNumber} ====</span>`,
         "",
+        `CURRENT BALANCE: ${this.balance.toLocaleString()}`,
+        `ACTIVE BET: ${this.betAmount ? "$" + this.betAmount.toLocaleString() + " | WIN PROFIT: $" + this.betAmount.toLocaleString() : "NONE"}`,
+        "",
         `SHELLS: ${this.chamber.length} ( ${this.liveRemaining} LIVE / ${this.blankRemaining} BLANK )`,
-        `PLAYER: ${health(this.player)}`,
-        `DEALER: ${health(this.dealer)}`,
+        `PLAYER LIVES: ${health(this.player)}`,
+        `DEALER LIVES: ${health(this.dealer)}`,
         "",
         `PLAYER ITEMS [${this.player.inventory.length}]: ${this.player.inventory.join(", ") || "none"}`,
         `DEALER ITEMS [${this.dealer.inventory.length}]: ${this.dealer.inventory.join(", ") || "none"}`,
