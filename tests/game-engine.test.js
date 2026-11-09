@@ -155,3 +155,28 @@ test("zero health ends a Double or Nothing run even in stages 1 and 2", () => {
   assert.equal(game.gameOver, true);
   assert.equal(game.winnings, 0);
 });
+
+test("Story losses in stages 1 and 2 revive the player and apply the correct penalties", () => {
+  const game = boot();
+  game.start("story");
+  game.player.health = 0;
+  game.checkStageEnd();
+  assert.equal(game.stage, 2);
+  assert.equal(game.storyPenalty, 4000);
+  assert.equal(game.player.health, 4);
+  game.player.health = 0;
+  game.checkStageEnd();
+  assert.equal(game.stage, 3);
+  assert.equal(game.storyPenalty, 6000);
+  assert.equal(game.player.health, 4);
+  assert.equal(game.player.fadedHealth, 2);
+});
+
+test("Story Mode payout deducts deaths, cigarettes and beer", () => {
+  const game = boot();
+  game.start("story");
+  game.storyPenalty = 6000;
+  game.cigarettesUsed = 2;
+  game.beersUsed = 1;
+  assert.equal(game.storyCash(), 63065);
+});
