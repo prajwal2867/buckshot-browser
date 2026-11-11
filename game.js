@@ -1118,9 +1118,20 @@
       ];
 
       if (this.mode === "cashout") {
-        lines.push(`RUNNING WINNINGS: $${this.winnings.toLocaleString()}`, "1. Double down", "2. Cash out");
+        lines.push(`RUNNING WINNINGS: ${this.winnings.toLocaleString()}`, "1. Double down", "2. Cash out");
       } else if (this.mode === "restart") {
         lines.push("GAME OVER", `FINAL CASH: ${(this.gameMode === "story" ? this.storyCash() : this.winnings).toLocaleString()}`, "Press R to restart.");
+      } else if (this.mode === "item") {
+        lines.push("INVENTORY — CHOOSE AN ITEM", ...this.player.inventory.map((item, index) =>
+          `${index + 1}. ${item} — ${ITEM_HELP[item] || "Use this item strategically."}`
+        ), "0. Return to your actions");
+      } else if (this.mode === "steal") {
+        lines.push("ADRENALINE — CHOOSE AN ITEM TO STEAL", "Choose quickly; the opportunity expires after 5 seconds.",
+          ...this.stealableItems.map((item, index) =>
+            `${index + 1}. ${item} — ${ITEM_HELP[item] || "Use this item strategically."}`
+          ));
+      } else if (this.mode === "waiting") {
+        lines.push("The Dealer is thinking…", "Your controls will return when the Dealer finishes.");
       } else {
         lines.push("1. Shoot the Dealer", "2. Shoot Yourself", "3. Use an item");
       }
