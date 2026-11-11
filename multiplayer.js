@@ -15,6 +15,8 @@
   let roomRequestPending = false;
   let wasDisconnected = false;
   let intentionalDisconnect = false;
+  let roomExpiryAt = 0;
+  let roomExpiryTimer = null;
 
   const el = {
     open: byId("multiplayer-open"), storyOpen: byId("story-open"),
@@ -50,7 +52,41 @@
     return button;
   };
 
+  function clearRoomExpiryCountdown() {
+    if (roomExpiryTimer) window.clearInterval(roomExpiryTimer);
+    roomExpiryTimer = null;
+    roomExpiryAt = 0;
+    el.expiry.textContent = "";
+  }
+
+  function startRoomExpiryCountdown() {
+    clearRoomExpiryCountdown();
+    roomExpiryAt = Date.now() + 5 * 60 * 1000;
+    const update = () => {
+      const remaining = Math.max(0, Math.ceil((roomExpiryAt - Date.now()) / 1000));
+      const minutes = Math.floor(remaining / 60);
+      const seconds = String(remaining % 60).padStart(2, "0");
+      el.expiry.textContent = remaining
+        ? "Room expires in " + minutes + ":" + seconds + " without activity."
+        : "Room expired. Return to the lobby to create or join another room.";
+      if (!remaining) {
+        clearRoomExpiryCountdown();
+        activeRoomCode = null;
+        pendingRequest = null;
+        isHost = false;
+        latestGame = null;
+        el.room.hidden = true;
+        el.game.hidden = true;
+        showIdentity();
+        setMessage("This room has expired after 5 minutes without activity. Create a new room or join with a fresh code.");
+      }
+    };
+    update();
+    roomExpiryTimer = window.setInterval(update, 1000);
+  }
+
   function showIdentity() {
+    clearRoomExpiryCountdown();
     const username = getUsername();
     el.identity.hidden = Boolean(username);
     el.lobby.hidden = !username;
@@ -78,6 +114,7 @@
     socket.on("disconnect", () => {
       if (intentionalDisconnect) return;
       wasDisconnected = true;
+      clearRoomExpiryCountdown();
       actionPending = false;
       roomRequestPending = false;
       activeRoomCode = null;
@@ -137,6 +174,7 @@
       activeRoomCode = data.code;
       roomRequestPending = false;
       el.create.disabled = false;
+      startRoomExpiryCountdown();
       isHost = true;
       el.room.hidden = false;
       el.lobby.hidden = true;
@@ -144,6 +182,7 @@
       el.expiry.textContent = "Rooms close after 5 minutes without activity. Start the match soon.";
       el.codeCard.hidden = false;
       el.codeDisplay.textContent = data.code.split("").join(" ");
+      startRoomExpiryCountdown();
       el.request.hidden = true;
       el.players.hidden = true;
       el.start.hidden = true;
@@ -155,6 +194,7 @@
       activeRoomCode = data.code;
       roomRequestPending = false;
       el.joinOpen.disabled = false;
+      startRoomExpiryCountdown();
       isHost = false;
       el.room.hidden = false;
       el.lobby.hidden = true;
@@ -183,6 +223,7 @@
     });
     socket.on("room:player-joined", (data) => {
       pendingRequest = null;
+      startRoomExpiryCountdown();
       el.request.hidden = true;
       el.codeCard.hidden = true;
       el.players.hidden = false;
@@ -214,6 +255,7 @@
       setMessage("The match has started.");
     });
     socket.on("game:state", (state) => {
+      startRoomExpiryCountdown();
       actionPending = false;
       latestGame = state;
       renderGame(state);
@@ -471,6 +513,7 @@
 
   el.leave.addEventListener("click", () => {
     intentionalDisconnect = true;
+    clearRoomExpiryCountdown();
     if (socket) socket.disconnect();
     socket = null;
     intentionalDisconnect = false;
