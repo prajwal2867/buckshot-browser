@@ -88,9 +88,9 @@
       isHost = false;
       el.room.hidden = false;
       el.lobby.hidden = true;
-      el.status.textContent = "WAITING ...";
+      el.status.textContent = "waiting ...";
       el.codeCard.hidden = true;
-      el.leave.textContent = "LEAVE ROOM [ 1 ]";
+      el.leave.textContent = "> LEAVE ROOM [ 1 ]";
       setMessage("Request sent to " + data.hostUsername + ".");
     });
     socket.on("room:join-request", (data) => {
@@ -133,7 +133,7 @@
       el.players.textContent = "> " + data.host.username + " vs " + data.guest.username;
       el.status.textContent = "WAITING ...";
       el.start.hidden = true;
-      el.leave.textContent = "LEAVE ROOM [ 1 ]";
+      el.leave.textContent = "> LEAVE ROOM [ 1 ]";
       setMessage("");
     });
     socket.on("game:started", () => {
