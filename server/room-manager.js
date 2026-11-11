@@ -75,6 +75,11 @@ class RoomManager {
     return this.rooms.get(String(code)) || null;
   }
 
+  getRoomForSocket(socketId) {
+    const membership = this.socketRooms.get(socketId);
+    return membership ? this.get(membership.code) : null;
+  }
+
   update(code, updater) {
     const room = this.get(code);
     if (!room) return null;
