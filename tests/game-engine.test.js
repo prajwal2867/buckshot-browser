@@ -26,7 +26,7 @@ function boot(randomValues = []) {
     "#prompt-label": label,
     "#keypad": keypad
   };
-  const document = { querySelector: (selector) => nodes[selector] };
+  const document = { querySelector: (selector) => nodes[selector], getElementById: () => null, addEventListener() {} };
   const scheduledTimers = [];
   const window = {
     matchMedia: () => ({ matches: false, addEventListener() {} }),
