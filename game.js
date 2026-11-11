@@ -66,11 +66,11 @@
       this.stealableItems = [];
       this.stealOwner = null;
       this.render();
-      screen.addEventListener("click", (event) => {
+      screen?.addEventListener?.("click", (event) => {
         const choice = event.target.closest("[data-main-mode]");
         if (choice && !choice.disabled && this.mode === "menu") this.submit(choice.dataset.mainMode);
       });
-      document.addEventListener("keydown", (event) => {
+      document?.addEventListener?.("keydown", (event) => {
         if (this.mode !== "menu" || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
         if (event.key === "1" || event.key === "2") {
           event.preventDefault();
