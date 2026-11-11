@@ -330,7 +330,7 @@ test("Adrenaline expires after the selection window and consumes itself", () => 
   game.selectItem("1");
   assert.equal(game.mode, "steal");
   assert.equal(game.stealTimer, 1);
-  assert.equal(game.scheduledTimers.at(-1).delay, 5000);
+  assert.equal(game.scheduledTimers.findLast((timer) => !timer.interval).delay, 5000);
   game.expireAdrenaline();
   assert.equal(game.mode, "action");
   assert.deepEqual(Array.from(game.player.inventory), []);
