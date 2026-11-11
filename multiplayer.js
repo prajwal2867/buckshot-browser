@@ -107,8 +107,18 @@
     });
     socket.on("game:error", (data) => {
       actionPending = false;
+      const message = data?.message || "That move was rejected.";
+      if (/match not found|room expired|room no longer exists/i.test(message)) {
+        activeRoomCode = null;
+        latestGame = null;
+        el.game.hidden = true;
+        el.room.hidden = true;
+        showIdentity();
+        setMessage("This room is no longer available. Create a new room or join with a fresh code.");
+        return;
+      }
       if (latestGame) renderGame(latestGame);
-      setMessage((data?.message || "That move was rejected.") + " Your turn has not been consumed; review the state and try again.");
+      setMessage(message + " Your turn has not been consumed; review the state and try again.");
     });
 
     socket.on("room:created", (data) => {
