@@ -132,6 +132,13 @@ class RedisRoomManager {
     return raw ? JSON.parse(raw) : null;
   }
 
+  async getRoomForSocket(socketId) {
+    const membership = await this.redis.get(this.socketKey(socketId));
+    if (!membership) return null;
+    const match = /^(?:host|guest|pending):(\\d{4})$/.exec(membership);
+    return match ? this.get(match[1]) : null;
+  }
+
   async update(code, updater) {
     const key = this.roomKey(String(code));
     for (let attempt = 0; attempt < 12; attempt++) {
