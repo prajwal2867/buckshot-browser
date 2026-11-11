@@ -103,7 +103,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .multiplayer-panel .room-players { margin: .75rem 0; font-size: inherit; color: #fff; }
 .multiplayer-panel .secondary-button { background: transparent; }
 .multiplayer-panel .multiplayer-message { min-height: 1em; margin: .75rem 0 0; }
-.multiplayer-panel .multiplayer-actions { display: flex; flex-direction: column; align-items: flex-start; gap: .35rem; margin-top: .75rem; }
+.multiplayer-panel .multiplayer-actions { display: flex; flex-direction: column; align-items: flex-start; gap: .12rem; margin-top: .75rem; }
 .multiplayer-panel .multiplayer-actions > button { min-height: 0; }
 .multiplayer-panel .multiplayer-actions form { max-width: 420px; }
 .multiplayer-panel .multiplayer-actions form label { margin: .75rem 8px .4rem 0; }
