@@ -13,8 +13,8 @@ function createHarness() {
   const sockets = new Map();
   const emitted = [];
   const io = {
-    connectionHandler: null,
-    on(event, handler) { if (event === "connection") this.connectionHandler = handler; },
+    connectionHandlers: [],
+    on(event, handler) { if (event === "connection") this.connectionHandlers.push(handler); },
     to(target) {
       return { emit(event, payload) { emitted.push({ target, event, payload }); } };
     },
@@ -43,7 +43,7 @@ function createHarness() {
       async disconnect() { return handlers.get("disconnect")?.(); }
     };
     sockets.set(id, socket);
-    io.connectionHandler(socket);
+    for (const handler of io.connectionHandlers) handler(socket);
     return socket;
   }
   attachRoomHandlers(io, roomManager, walletManager);
