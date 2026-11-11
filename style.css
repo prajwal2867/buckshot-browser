@@ -12,7 +12,8 @@ body {
 }
 
 .site-header {
-  display: none;
+  display: flex;
+  width: min(100%, 960px);
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -21,7 +22,7 @@ body {
   padding-bottom: 10px;
   border-bottom: 1px solid #333;
 }
-.site-header.multiplayer-active { display: flex; }
+
 .mode-switch { display: flex; gap: 8px; }
 .mode-button { border-color: #555; background: transparent; }
 .mode-button.active { border-color: #aaa; background: #292929; color: #fff; }
@@ -119,6 +120,7 @@ main {
 body.main-menu {
   box-sizing: border-box;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
@@ -200,6 +202,10 @@ body.main-menu #keypad { display: none !important; }
   .mode-switch { gap: 5px; }
   .mode-button { padding: 6px 8px; }
   .multiplayer-actions { grid-template-columns: 1fr; }
+  .multiplayer-panel button { min-height: 44px; padding: 8px 10px; touch-action: manipulation; }
+  .multiplayer-panel .text-button { min-height: 40px; }
+  .inline-controls { align-items: stretch; }
+  .inline-controls input { flex-basis: 100%; min-height: 44px; }
   #command-form { min-height: 32px; }
   #command-input { font-size: 16px; }
   #keypad {
