@@ -997,7 +997,7 @@
         ].join("\n");
         promptLabel.textContent = "Select mode:";
         input.disabled = false;
-        input.placeholder = "Enter 1 or 2";
+        input.placeholder = "";
         keypadButtons.forEach((button) => button.disabled = false);
         if (!input.readOnly) input.focus();
         return;
