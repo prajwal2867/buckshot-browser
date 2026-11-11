@@ -287,3 +287,47 @@ body.main-menu #keypad { display: none !important; }
   .pvp-controls button, .pvp-inventory button, .pvp-steal button { min-height: 44px; }
   #screen { overflow-wrap: anywhere; }
 }
+
+
+/* Center the complete Story Mode experience, including the betting prompt. */
+body.story-active {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+body.story-active #story-mode {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: min(100%, 960px);
+  margin: 0 auto;
+  text-align: center;
+}
+body.story-active #screen {
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
+}
+body.story-active #command-form {
+  justify-content: center;
+  width: 100%;
+  margin-top: .25rem;
+}
+body.story-active #command-input {
+  flex: 0 1 14ch;
+  max-width: 45%;
+  text-align: left;
+}
+body.story-active #keypad {
+  width: min(100%, 360px);
+  margin: 0 auto;
+}
+body.story-active .event-log {
+  width: min(100%, 680px);
+  box-sizing: border-box;
+  margin: 8px auto 0;
+  text-align: left;
+}
