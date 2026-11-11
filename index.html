@@ -22,10 +22,11 @@
       <div id="multiplayer-identity">
         <div class="inline-controls">
           <label for="multiplayer-username">Choose your username :</label>
-          <input id="multiplayer-username" maxlength="16" minlength="3" autocomplete="nickname"
-            placeholder="Enter username">
+          <input id="multiplayer-username" maxlength="16" minlength="3" pattern="[A-Za-z0-9_-]{3,16}" autocomplete="nickname"
+            placeholder="3–16 characters">
           <button id="username-save" type="button">Save</button>
         </div>
+        <p class="help-text">Use 3–16 letters, numbers, underscores or hyphens. Your username is saved only in this browser.</p>
       </div>
 
       <div id="multiplayer-lobby" hidden>
@@ -47,7 +48,7 @@
       </div>
 
       <div id="multiplayer-room" hidden>
-        <p id="multiplayer-status" class="status-line" role="status">Connecting...</p>
+        <p id="multiplayer-status" class="status-line" role="status" aria-live="polite">Connecting...</p>
         <div id="join-request" class="join-request" hidden>
           <p>&gt; <strong id="join-request-name"></strong> wants to join ...</p>
           <div class="inline-controls">
@@ -57,12 +58,17 @@
         </div>
         <div id="room-code-card" hidden>
           <p class="room-code-line">&gt; ROOM CODE: <strong id="room-code-display" class="room-code"></strong></p>
+          <div class="inline-controls">
+            <button id="room-copy-code" type="button">Copy room code</button>
+            <button id="room-copy-invite" type="button">Copy invite message</button>
+          </div>
         </div>
+        <p id="room-expiry" class="help-text" role="status" aria-live="polite"></p>
         <div id="room-players" class="room-players" hidden></div>
         <button id="game-start" type="button" hidden>Start match</button>
         <section id="pvp-game" class="pvp-game" hidden aria-label="PvP match">
           <h2>Match</h2>
-          <p id="pvp-turn" class="status-line"></p>
+          <p id="pvp-turn" class="status-line" role="status" aria-live="polite"></p>
           <div id="pvp-scoreboard" class="pvp-scoreboard"></div>
           <p id="pvp-magazine" class="help-text"></p>
           <p id="pvp-known-shell" class="help-text"></p>
@@ -77,6 +83,7 @@
         <button id="room-leave" class="secondary-button" type="button">Leave room</button>
       </div>
 
+      <button id="multiplayer-reconnect" class="secondary-button" type="button" hidden>Reconnect</button>
       <p id="multiplayer-message" class="multiplayer-message" role="status" aria-live="polite"></p>
     </section>
 

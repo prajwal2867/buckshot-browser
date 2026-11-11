@@ -11,6 +11,12 @@
   let pendingRequest = null;
   let isHost = false;
   let latestGame = null;
+  let actionPending = false;
+  let roomRequestPending = false;
+  let wasDisconnected = false;
+  let intentionalDisconnect = false;
+  let roomExpiryAt = 0;
+  let roomExpiryTimer = null;
 
   const el = {
     open: byId("multiplayer-open"), storyOpen: byId("story-open"),
@@ -25,6 +31,8 @@
     requestName: byId("join-request-name"), accept: byId("join-accept"),
     decline: byId("join-decline"), players: byId("room-players"),
     leave: byId("room-leave"), start: byId("game-start"), game: byId("pvp-game"),
+    copyCode: byId("room-copy-code"), copyInvite: byId("room-copy-invite"),
+    reconnect: byId("multiplayer-reconnect"), expiry: byId("room-expiry"),
     turn: byId("pvp-turn"), scoreboard: byId("pvp-scoreboard"),
     magazine: byId("pvp-magazine"), known: byId("pvp-known-shell"),
     shootOpponent: byId("pvp-shoot-opponent"), shootSelf: byId("pvp-shoot-self"),
@@ -44,7 +52,41 @@
     return button;
   };
 
+  function clearRoomExpiryCountdown() {
+    if (roomExpiryTimer) window.clearInterval(roomExpiryTimer);
+    roomExpiryTimer = null;
+    roomExpiryAt = 0;
+    el.expiry.textContent = "";
+  }
+
+  function startRoomExpiryCountdown() {
+    clearRoomExpiryCountdown();
+    roomExpiryAt = Date.now() + 5 * 60 * 1000;
+    const update = () => {
+      const remaining = Math.max(0, Math.ceil((roomExpiryAt - Date.now()) / 1000));
+      const minutes = Math.floor(remaining / 60);
+      const seconds = String(remaining % 60).padStart(2, "0");
+      el.expiry.textContent = remaining
+        ? "Room expires in " + minutes + ":" + seconds + " without activity."
+        : "Room expired. Return to the lobby to create or join another room.";
+      if (!remaining) {
+        clearRoomExpiryCountdown();
+        activeRoomCode = null;
+        pendingRequest = null;
+        isHost = false;
+        latestGame = null;
+        el.room.hidden = true;
+        el.game.hidden = true;
+        showIdentity();
+        setMessage("This room has expired after 5 minutes without activity. Create a new room or join with a fresh code.");
+      }
+    };
+    update();
+    roomExpiryTimer = window.setInterval(update, 1000);
+  }
+
   function showIdentity() {
+    clearRoomExpiryCountdown();
     const username = getUsername();
     el.identity.hidden = Boolean(username);
     el.lobby.hidden = !username;
@@ -62,20 +104,85 @@
       return null;
     }
     socket = window.io({ path: "/api/socket", addTrailingSlash: false, transports: ["websocket"] });
-    socket.on("connect", () => setMessage("Connected to multiplayer server."));
-    socket.on("disconnect", () => setMessage("Connection lost. The current match may be interrupted."));
-    socket.on("connect_error", () => setMessage("Could not connect to the multiplayer server."));
-    socket.on("room:error", (data) => setMessage(data?.message || "Something went wrong."));
-    socket.on("game:error", (data) => setMessage(data?.message || "That move was rejected."));
+    socket.on("connect", () => {
+      el.reconnect.hidden = true;
+      if (wasDisconnected) {
+        wasDisconnected = false;
+        setMessage("Reconnected. Your previous room could not be restored; create a new room or join again.");
+      } else setMessage("Connected to multiplayer server.");
+    });
+    socket.on("disconnect", () => {
+      if (intentionalDisconnect) return;
+      wasDisconnected = true;
+      clearRoomExpiryCountdown();
+      actionPending = false;
+      roomRequestPending = false;
+      activeRoomCode = null;
+      pendingRequest = null;
+      isHost = false;
+      latestGame = null;
+      el.room.hidden = true;
+      el.game.hidden = true;
+      el.start.hidden = true;
+      el.reconnect.hidden = false;
+      showIdentity();
+      setMessage("Connection lost. Your room has ended. Reconnect, then create a new room or join with a fresh code.");
+    });
+    socket.on("connect_error", () => {
+      el.reconnect.hidden = false;
+      setMessage("Could not reach the multiplayer server. Check your connection and try Reconnect.");
+    });
+    socket.on("room:error", (data) => {
+      roomRequestPending = false;
+      actionPending = false;
+      el.create.disabled = false;
+      el.joinOpen.disabled = false;
+      el.start.disabled = false;
+      el.accept.disabled = false;
+      el.decline.disabled = false;
+      const message = data?.message || "Something went wrong. Check the room code and try again.";
+      if (/room is no longer ready|room.*expired/i.test(message)) {
+        activeRoomCode = null;
+        pendingRequest = null;
+        isHost = false;
+        latestGame = null;
+        el.room.hidden = true;
+        el.game.hidden = true;
+        showIdentity();
+        setMessage("This room has expired or a player disconnected. Create a new room or join with a fresh code.");
+        return;
+      }
+      setMessage(message);
+    });
+    socket.on("game:error", (data) => {
+      actionPending = false;
+      const message = data?.message || "That move was rejected.";
+      if (/match not found|room expired|room no longer exists/i.test(message)) {
+        activeRoomCode = null;
+        latestGame = null;
+        el.game.hidden = true;
+        el.room.hidden = true;
+        showIdentity();
+        setMessage("This room is no longer available. Create a new room or join with a fresh code.");
+        return;
+      }
+      if (latestGame) renderGame(latestGame);
+      setMessage(message + " Your turn has not been consumed; review the state and try again.");
+    });
 
     socket.on("room:created", (data) => {
       activeRoomCode = data.code;
+      roomRequestPending = false;
+      el.create.disabled = false;
+      startRoomExpiryCountdown();
       isHost = true;
       el.room.hidden = false;
       el.lobby.hidden = true;
-      el.status.textContent = "waiting ...";
+      el.status.textContent = "Room ready. Share the code and wait for your opponent.";
+      el.expiry.textContent = "Rooms close after 5 minutes without activity. Start the match soon.";
       el.codeCard.hidden = false;
       el.codeDisplay.textContent = data.code.split("").join(" ");
+      startRoomExpiryCountdown();
       el.request.hidden = true;
       el.players.hidden = true;
       el.start.hidden = true;
@@ -85,15 +192,20 @@
     });
     socket.on("room:join-pending", (data) => {
       activeRoomCode = data.code;
+      roomRequestPending = false;
+      el.joinOpen.disabled = false;
+      startRoomExpiryCountdown();
       isHost = false;
       el.room.hidden = false;
       el.lobby.hidden = true;
-      el.status.textContent = "waiting ...";
+      el.status.textContent = "Request sent. Waiting for the host to approve you.";
+      el.expiry.textContent = "If the host does not respond, you can leave and try another room.";
       el.codeCard.hidden = true;
       el.leave.textContent = "> LEAVE ROOM [ 1 ]";
       setMessage("Request sent to " + data.hostUsername + ".");
     });
     socket.on("room:join-request", (data) => {
+      startRoomExpiryCountdown();
       pendingRequest = data;
       el.request.hidden = false;
       el.requestName.textContent = data.username;
@@ -101,8 +213,17 @@
       el.leave.textContent = "> LEAVE ROOM [ 3 ]";
       setMessage("");
     });
+    socket.on("room:request-declined", (data) => {
+      if (activeRoomCode !== data.code) return;
+      pendingRequest = null;
+      el.request.hidden = true;
+      startRoomExpiryCountdown();
+      setMessage("Join request declined. Your room is still available to share.");
+    });
     socket.on("room:declined", () => {
+      clearRoomExpiryCountdown();
       activeRoomCode = null;
+      roomRequestPending = false;
       el.room.hidden = true;
       el.lobby.hidden = false;
       el.joinForm.hidden = true;
@@ -111,11 +232,12 @@
     });
     socket.on("room:player-joined", (data) => {
       pendingRequest = null;
+      startRoomExpiryCountdown();
       el.request.hidden = true;
       el.codeCard.hidden = true;
       el.players.hidden = false;
       el.players.textContent = "> " + data.host.username + " vs " + data.guest.username;
-      el.status.textContent = "";
+      el.status.textContent = "Opponent connected. The host can start when both players are ready.";
       el.start.hidden = false;
       el.start.textContent = "Start [ 1 ]";
       el.leave.textContent = "Leave [ 2 ]";
@@ -131,7 +253,7 @@
       el.request.hidden = true;
       el.players.hidden = false;
       el.players.textContent = "> " + data.host.username + " vs " + data.guest.username;
-      el.status.textContent = "WAITING ...";
+      el.status.textContent = "You are in. Waiting for the host to start the match.";
       el.start.hidden = true;
       el.leave.textContent = "> LEAVE ROOM [ 1 ]";
       setMessage("");
@@ -142,6 +264,8 @@
       setMessage("The match has started.");
     });
     socket.on("game:state", (state) => {
+      startRoomExpiryCountdown();
+      actionPending = false;
       latestGame = state;
       renderGame(state);
     });
@@ -185,7 +309,7 @@
     el.known.textContent = state.knownCurrentShell
       ? "Your current-shell information: " + state.knownCurrentShell.toUpperCase()
       : "You do not know the current shell.";
-    const canAct = state.status === "playing" && state.yourTurn;
+    const canAct = state.status === "playing" && state.yourTurn && !actionPending;
     el.shootOpponent.disabled = !canAct || state.stealOptions.length > 0;
     el.shootSelf.disabled = !canAct || state.stealOptions.length > 0;
     el.inventory.replaceChildren();
@@ -216,13 +340,34 @@
   }
 
   function sendAction(action) {
-    if (!socket || !activeRoomCode) return;
+    if (actionPending) return;
+    if (!socket || !socket.connected || !activeRoomCode) {
+      setMessage("You are not connected to an active room. Reconnect and rejoin before making a move.");
+      return;
+    }
+    actionPending = true;
+    el.status.textContent = "Move sent. Waiting for the server to confirm…";
+    el.turn.textContent = "Submitting your move…";
+    el.shootOpponent.disabled = true;
+    el.shootSelf.disabled = true;
+    el.inventory.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+    el.steal.querySelectorAll("button").forEach((button) => { button.disabled = true; });
     socket.emit("game:action", { code: activeRoomCode, action });
+  }
+
+  async function copyText(value, successMessage) {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard access unavailable");
+      await navigator.clipboard.writeText(value);
+      setMessage(successMessage);
+    } catch {
+      setMessage("Clipboard access was blocked. Select the room code and copy it manually.");
+    }
   }
 
   function showMode(mode) {
     const multiplayer = mode === "multiplayer";
-    document.querySelector(".site-header").classList.toggle("multiplayer-active", multiplayer);
+    document.body.classList.toggle("story-active", !multiplayer);
     panel.hidden = !multiplayer;
     storyMode.hidden = multiplayer;
     el.open.classList.toggle("active", multiplayer);
@@ -242,6 +387,24 @@
 
   window.addEventListener("buckshot:mode", (event) => {
     if (event.detail === "multiplayer") showMode("multiplayer");
+  });
+
+  el.copyCode.addEventListener("click", () => {
+    if (activeRoomCode) copyText(activeRoomCode, "Room code copied. Send it to your opponent.");
+  });
+  el.copyInvite.addEventListener("click", () => {
+    if (!activeRoomCode) return;
+    const invite = "Join my Buckshot Roulette match. Open " + window.location.href.split("?")[0] +
+      ", choose Multiplayer, and enter room code " + activeRoomCode + ".";
+    copyText(invite, "Invite message copied. Send it to your opponent.");
+  });
+  el.reconnect.addEventListener("click", () => {
+    const connection = ensureSocket();
+    if (!connection) return;
+    setMessage("Reconnecting to multiplayer server…");
+    el.reconnect.disabled = true;
+    connection.connect();
+    window.setTimeout(() => { el.reconnect.disabled = false; }, 1500);
   });
 
   el.open.addEventListener("click", () => showMode("multiplayer"));
@@ -269,7 +432,16 @@
     try { localStorage.removeItem(usernameKey); } catch {}
     showIdentity();
   });
-  el.create.addEventListener("click", () => emitWhenConnected("room:create", { username: getUsername() }));
+  el.create.addEventListener("click", () => {
+    if (roomRequestPending) return;
+    roomRequestPending = true;
+    el.create.disabled = true;
+    setMessage("Creating your room…");
+    if (!emitWhenConnected("room:create", { username: getUsername() })) {
+      roomRequestPending = false;
+      el.create.disabled = false;
+    }
+  });
   el.joinOpen.addEventListener("click", () => {
     el.joinOpen.hidden = true;
     el.joinForm.hidden = false;
@@ -279,7 +451,13 @@
     event.preventDefault();
     const code = el.joinCode.value.trim();
     if (!/^\d{4}$/.test(code)) { setMessage("Enter a valid four-digit room code."); return; }
-    emitWhenConnected("room:join", { code, username: getUsername() });
+    roomRequestPending = true;
+    el.joinOpen.disabled = true;
+    setMessage("Sending your join request…");
+    if (!emitWhenConnected("room:join", { code, username: getUsername() })) {
+      roomRequestPending = false;
+      el.joinOpen.disabled = false;
+    }
   });
   el.accept.addEventListener("click", () => {
     if (socket && pendingRequest) socket.emit("room:respond", {
@@ -297,7 +475,10 @@
     setMessage("Join request declined.");
   });
   el.start.addEventListener("click", () => {
-    if (isHost && socket && activeRoomCode) socket.emit("game:start", { code: activeRoomCode });
+    if (!isHost || !socket?.connected || !activeRoomCode || el.start.disabled) return;
+    el.start.disabled = true;
+    el.status.textContent = "Starting match…";
+    socket.emit("game:start", { code: activeRoomCode });
   });
   el.shootOpponent.addEventListener("click", () => sendAction({ type: "shoot", target: "opponent" }));
   el.shootSelf.addEventListener("click", () => sendAction({ type: "shoot", target: "self" }));
@@ -341,8 +522,11 @@
   });
 
   el.leave.addEventListener("click", () => {
+    intentionalDisconnect = true;
+    clearRoomExpiryCountdown();
     if (socket) socket.disconnect();
     socket = null;
+    intentionalDisconnect = false;
     activeRoomCode = null;
     pendingRequest = null;
     isHost = false;

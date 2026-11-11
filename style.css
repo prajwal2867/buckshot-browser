@@ -12,7 +12,8 @@ body {
 }
 
 .site-header {
-  display: none;
+  display: flex;
+  width: min(100%, 960px);
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -21,7 +22,7 @@ body {
   padding-bottom: 10px;
   border-bottom: 1px solid #333;
 }
-.site-header.multiplayer-active { display: flex; }
+
 .mode-switch { display: flex; gap: 8px; }
 .mode-button { border-color: #555; background: transparent; }
 .mode-button.active { border-color: #aaa; background: #292929; color: #fff; }
@@ -119,6 +120,7 @@ main {
 body.main-menu {
   box-sizing: border-box;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
@@ -197,9 +199,16 @@ body.main-menu #keypad { display: none !important; }
     min-height: 100vh;
     padding: 8px;
   }
-  .mode-switch { gap: 5px; }
+  .site-header { flex-wrap: wrap; }
+  .mode-switch { gap: 5px; flex-wrap: wrap; }
+  .mode-button { min-height: 44px; }
+  :root { font-size: clamp(14px, 3vw, 16px); }
   .mode-button { padding: 6px 8px; }
   .multiplayer-actions { grid-template-columns: 1fr; }
+  .multiplayer-panel button { min-height: 44px; padding: 8px 10px; touch-action: manipulation; }
+  .multiplayer-panel .text-button { min-height: 40px; }
+  .inline-controls { align-items: stretch; }
+  .inline-controls input { flex-basis: 100%; min-height: 44px; }
   #command-form { min-height: 32px; }
   #command-input { font-size: 16px; }
   #keypad {
@@ -210,7 +219,7 @@ body.main-menu #keypad { display: none !important; }
   }
   #keypad button {
     min-width: 0;
-    min-height: 42px;
+    min-height: 44px;
     border: 1px solid #555;
     border-radius: 4px;
     background: #222;
@@ -275,4 +284,50 @@ body.main-menu #keypad { display: none !important; }
 .pvp-game button:disabled { opacity: .4; cursor: not-allowed; }
 @media (max-width: 520px) {
   .pvp-scoreboard { grid-template-columns: 1fr; }
+  .pvp-controls button, .pvp-inventory button, .pvp-steal button { min-height: 44px; }
+  #screen { overflow-wrap: anywhere; }
+}
+
+
+/* Center the complete Story Mode experience, including the betting prompt. */
+body.story-active {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+body.story-active #story-mode {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: min(100%, 960px);
+  margin: 0 auto;
+  text-align: center;
+}
+body.story-active #screen {
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
+}
+body.story-active #command-form {
+  justify-content: center;
+  width: 100%;
+  margin-top: .25rem;
+}
+body.story-active #command-input {
+  flex: 0 1 14ch;
+  max-width: 45%;
+  text-align: left;
+}
+body.story-active #keypad {
+  width: min(100%, 360px);
+  margin: 0 auto;
+}
+body.story-active .event-log {
+  width: min(100%, 680px);
+  box-sizing: border-box;
+  margin: 8px auto 0;
+  text-align: left;
 }

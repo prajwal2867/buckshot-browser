@@ -23,6 +23,17 @@
     "Adrenaline", "Burner Phone", "Inverter", "Expired Medicine"
   ];
   const ALL_ITEMS = [...BASE_ITEMS, ...EXTRA_ITEMS];
+  const ITEM_HELP = {
+    "Magnifying Glass": "Reveal the shell currently in the chamber.",
+    "Handcuffs": "Make the Dealer miss their next turn.",
+    "Beer": "Eject the current shell without firing it.",
+    "Cigarette Pack": "Restore 1 health, up to your normal maximum.",
+    "Hand Saw": "Your next live shot deals 2 damage.",
+    "Adrenaline": "Steal and immediately use one of the Dealer's usable items.",
+    "Burner Phone": "Reveal one upcoming shell in the magazine.",
+    "Inverter": "Turn the current shell from live to blank, or blank to live.",
+    "Expired Medicine": "A 50/50 chance to restore up to 2 health or lose 1."
+  };
 
   const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
   const randomInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
@@ -36,6 +47,8 @@
       this.opponent = this.dealer;
       this.mode = "menu";
       this.gameMode = "story";
+      this.tutorialReturnMode = "bet";
+      this.tutorialSeen = this.loadTutorialSeen();
       this.bankruptcyDeferred = false;
       this.balance = this.loadBalance();
       this.mode = "menu";
@@ -57,6 +70,8 @@
       this.busy = false;
       this.timer = null;
       this.stealTimer = null;
+      this.stealCountdownInterval = null;
+      this.stealDeadline = 0;
       this.setNumber = 1;
       this.winnings = 0;
       this.setStartedAt = 0;
@@ -72,7 +87,7 @@
       });
       document?.addEventListener?.("keydown", (event) => {
         if (this.mode !== "menu" || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
-        if (event.key === "1" || event.key === "2") {
+        if (event.key === "1" || event.key === "2" || event.key === "3") {
           event.preventDefault();
           this.submit(event.key);
         }
@@ -105,11 +120,33 @@
       const command = String(raw).trim().toLowerCase();
       if (this.mode === "menu") {
         if (command === "1") {
-          this.mode = this.balance <= 300 && !this.bankruptcyDeferred ? "bankruptcy" : "bet";
+          if (!this.tutorialSeen) {
+            this.tutorialReturnMode = "bet";
+            this.mode = "tutorial";
+          } else {
+            this.mode = this.balance <= 300 && !this.bankruptcyDeferred ? "bankruptcy" : "bet";
+          }
           this.render();
         } else if (command === "2") {
           window.dispatchEvent(new CustomEvent("buckshot:mode", { detail: "multiplayer" }));
+        } else if (command === "3") {
+          this.tutorialReturnMode = "menu";
+          this.mode = "tutorial";
+          this.render();
         }
+        return;
+      }
+      if (this.mode === "tutorial") {
+        if (["1", "2", "y", "n", ""].includes(command)) {
+          this.tutorialSeen = true;
+          try { window.localStorage?.setItem("buckshot-browser.tutorial-seen", "true"); } catch {}
+          this.mode = this.tutorialReturnMode === "menu"
+            ? "menu"
+            : (this.balance <= 300 && !this.bankruptcyDeferred ? "bankruptcy" : "bet");
+        } else {
+          this.addEvent("Press 1 to continue or 2 to skip this guide.");
+        }
+        this.render();
         return;
       }
       if (this.mode === "bet") {
@@ -128,7 +165,7 @@
         this.betSettled = false;
         this.balance -= amount;
         this.saveBalance();
-        this.mode = "start";
+        this.start("story");
         this.addEvent(amount ? "Bet placed: $" + amount.toLocaleString() + "." : "Free play selected. No bet placed.");
         this.render();
         return;
@@ -143,15 +180,6 @@
           this.addEvent("Choose 1 to file bankruptcy or 2 to decline for now.");
         }
         this.render();
-        return;
-      }
-      if (this.mode === "start") {
-        if (command === "2" && !this.doubleUnlocked) {
-          this.addEvent("Double or Nothing is locked. Win Story Mode once to unlock it.");
-          this.render();
-          return;
-        }
-        this.start(command === "2" ? "double" : "story");
         return;
       }
       if (this.mode === "restart") {
@@ -182,6 +210,14 @@
       else if (command === "3") this.openInventory();
       else this.addEvent("Choose 1, 2, or 3.");
       this.afterPlayerCommand();
+    }
+
+    loadTutorialSeen() {
+      try {
+        return window.localStorage?.getItem("buckshot-browser.tutorial-seen") === "true";
+      } catch {
+        return false;
+      }
     }
 
     loadBalance() {
@@ -315,8 +351,11 @@
     reset() {
       if (this.timer) clearTimeout(this.timer);
       if (this.stealTimer) window.clearTimeout(this.stealTimer);
+      if (this.stealCountdownInterval) window.clearInterval(this.stealCountdownInterval);
       this.timer = null;
       this.stealTimer = null;
+      this.stealCountdownInterval = null;
+      this.stealDeadline = 0;
       this.player = this.makeEntity("Player");
       this.dealer = this.makeEntity("Dealer");
       this.current = this.player;
@@ -553,7 +592,6 @@
         } else if (playerWon) {
           this.gameOver = true;
           this.mode = "restart";
-          this.unlockDoubleOrNothing();
           this.addEvent("You survived Story Mode. The briefcase is yours.");
           this.settleBet(true);
           this.addEvent(`Final Story Mode cash: ${this.storyCash().toLocaleString()}.`);
@@ -626,8 +664,10 @@
         return;
       }
       this.mode = "item";
-      this.addEvent("Choose an item number (0 to return):");
-      this.player.inventory.forEach((item, i) => this.addEvent(`${i + 1}. ${item}`));
+      this.addEvent("Choose an item number (0 to return). Item effects:");
+      this.player.inventory.forEach((item, i) =>
+        this.addEvent(`${i + 1}. ${item} — ${ITEM_HELP[item] || "Use this item strategically."}`)
+      );
     }
 
     selectItem(command) {
@@ -663,7 +703,10 @@
         return;
       }
       if (this.stealTimer) window.clearTimeout(this.stealTimer);
+      if (this.stealCountdownInterval) window.clearInterval(this.stealCountdownInterval);
       this.stealTimer = null;
+      this.stealCountdownInterval = null;
+      this.stealDeadline = 0;
       const owner = this.stealOwner;
       const victim = owner === this.player ? this.dealer : this.player;
       const victimIndex = victim.inventory.indexOf(item);
@@ -692,6 +735,9 @@
     expireAdrenaline() {
       if (this.mode !== "steal" || this.stealOwner !== this.player) return;
       this.stealTimer = null;
+      if (this.stealCountdownInterval) window.clearInterval(this.stealCountdownInterval);
+      this.stealCountdownInterval = null;
+      this.stealDeadline = 0;
       this.consumeItem(this.player, "Adrenaline");
       this.stealableItems = [];
       this.stealOwner = null;
@@ -791,7 +837,18 @@
             this.stealOwner = owner;
             this.addEvent("Choose an opponent item to steal within 5 seconds:");
             candidates.forEach((candidate, i) => this.addEvent(`${i + 1}. ${candidate}`));
+            this.stealDeadline = Date.now() + 5000;
             this.stealTimer = window.setTimeout(() => this.expireAdrenaline(), 5000);
+            this.stealCountdownInterval = window.setInterval(() => {
+              if (this.mode !== "steal" || this.stealOwner !== this.player) {
+                window.clearInterval(this.stealCountdownInterval);
+                this.stealCountdownInterval = null;
+                return;
+              }
+              const seconds = Math.max(0, Math.ceil((this.stealDeadline - Date.now()) / 1000));
+              const countdown = screen.querySelector("#steal-countdown");
+              if (countdown) countdown.textContent = seconds + (seconds === 1 ? " second remaining" : " seconds remaining");
+            }, 100);
             return "steal";
           }
           const chosen = this.chooseDealerSteal(candidates);
@@ -944,6 +1001,7 @@
 
     render() {
       document.body?.classList?.toggle("main-menu", this.mode === "menu");
+      document.body?.classList?.add("story-active");
       if (this.mode === "menu") {
         screen.innerHTML = [
           '<span class="title">BUCKSHOT ROULETTE</span>', "",
@@ -951,6 +1009,7 @@
           '<div class="menu-options">',
           '<button class="menu-choice" type="button" data-main-mode="1">&gt; [ 1 ] : STORY MODE</button>',
           '<button class="menu-choice" type="button" data-main-mode="2">&gt; [ 2 ] : MULTIPLAYER</button>',
+          '<button class="menu-choice" type="button" data-main-mode="3">&gt; [ 3 ] : HOW TO PLAY</button>',
           '</div>',
           "",
           "Select mode:"
@@ -958,6 +1017,35 @@
         promptLabel.textContent = "Select mode:";
         input.disabled = true;
         keypadButtons.forEach((button) => button.disabled = true);
+        return;
+      }
+
+      if (this.mode === "tutorial") {
+        screen.innerHTML = [
+          '<span class="title">HOW TO PLAY</span>', "",
+          "YOUR OBJECTIVE",
+          "Reduce the Dealer's health to zero before yours reaches zero.",
+          "",
+          "YOUR TURN",
+          "1. Shoot the Dealer — use a shell against the Dealer.",
+          "2. Shoot Yourself — a blank keeps your turn; a live shell hurts you.",
+          "3. Use an Item — inspect your inventory and choose an item.",
+          "",
+          "READ THE TABLE",
+          "Live and blank shell counts are shown, but their order is hidden.",
+          "Items reveal information, change shells, heal, or control turns.",
+          "The event log records important actions and results.",
+          "",
+          "BETTING",
+          "Your stake is deducted before the match. A win returns 2× your stake.",
+          "Choose 0 if you want to play without a wager.",
+          "",
+          "1. CONTINUE    2. SKIP GUIDE"
+        ].join("\\n");
+        promptLabel.textContent = "Press 1 to continue or 2 to skip:";
+        input.disabled = false;
+        if (!input.readOnly) input.focus();
+        keypadButtons.forEach((b) => b.disabled = false);
         return;
       }
 
@@ -997,26 +1085,6 @@
         return;
       }
 
-      if (this.mode === "start") {
-        screen.innerHTML = [
-          '<span class="title">BUCKSHOT ROULETTE</span>', "",
-          `CURRENT BALANCE: ${this.balance.toLocaleString()}`,
-          `YOUR BET: ${this.betAmount ? "$" + this.betAmount.toLocaleString() + " | WIN: +$" + this.betAmount.toLocaleString() + " | PAYOUT: $" + (this.betAmount * 2).toLocaleString() : "NONE"}`, "",
-          "1. Story Mode",
-          this.doubleUnlocked ? "2. Double or Nothing" : "2. Double or Nothing (locked)",
-          "",
-          this.doubleUnlocked
-            ? "Press Enter for Story Mode, or enter 2 for Double or Nothing."
-            : "Win Story Mode once to unlock Double or Nothing.",
-          "", '<span class="separator">---</span>'
-        ].join("\n");
-        promptLabel.textContent = "Mode:";
-        input.disabled = false;
-        if (!input.readOnly) input.focus();
-        keypadButtons.forEach((b) => b.disabled = false);
-        return;
-      }
-
       const health = (entity) => entity.fadedHealth
         ? `${entity.health} + ${entity.fadedHealth} cracked${entity.cutWire ? " (wire cut)" : ""}`
         : String(entity.health);
@@ -1038,9 +1106,20 @@
       ];
 
       if (this.mode === "cashout") {
-        lines.push(`RUNNING WINNINGS: $${this.winnings.toLocaleString()}`, "1. Double down", "2. Cash out");
+        lines.push(`RUNNING WINNINGS: ${this.winnings.toLocaleString()}`, "1. Double down", "2. Cash out");
       } else if (this.mode === "restart") {
         lines.push("GAME OVER", `FINAL CASH: ${(this.gameMode === "story" ? this.storyCash() : this.winnings).toLocaleString()}`, "Press R to restart.");
+      } else if (this.mode === "item") {
+        lines.push("INVENTORY — CHOOSE AN ITEM", ...this.player.inventory.map((item, index) =>
+          `${index + 1}. ${item} — ${ITEM_HELP[item] || "Use this item strategically."}`
+        ), "0. Return to your actions");
+      } else if (this.mode === "steal") {
+        lines.push("ADRENALINE — CHOOSE AN ITEM TO STEAL", "Choose quickly; the opportunity expires after 5 seconds.", '<span id="steal-countdown">5 seconds remaining</span>',
+          ...this.stealableItems.map((item, index) =>
+            `${index + 1}. ${item} — ${ITEM_HELP[item] || "Use this item strategically."}`
+          ));
+      } else if (this.mode === "waiting") {
+        lines.push("The Dealer is thinking…", "Your controls will return when the Dealer finishes.");
       } else {
         lines.push("1. Shoot the Dealer", "2. Shoot Yourself", "3. Use an item");
       }
