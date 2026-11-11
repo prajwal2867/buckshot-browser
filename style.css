@@ -137,8 +137,7 @@ body.main-menu #screen {
   max-width: 100%;
   margin: 0 auto;
 }
-body.main-menu #command-form,
-body.main-menu #keypad { display: none !important; }
+body.main-menu #command-form { display: none !important; }
 
 #screen {
   margin: 0;
