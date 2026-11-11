@@ -108,6 +108,7 @@ class MemoryWalletManager {
     const account = this.accounts.get(token);
     return account ? { ...account } : null;
   }
+  async getAccountById(playerId) { const account = [...this.accounts.values()].find((entry) => entry.id === playerId); return account ? { ...account } : null; }
   async lockWager(wager) {
     const existing = this.wagers.get(wager.id);
     if (existing) return existing.status === "locked" || existing.status === "settled" ? { ...existing } : null;
@@ -185,6 +186,10 @@ class RedisWalletManager {
   async getAccount(token) {
     const playerId = await this.redis.get(this.tokenKey(token));
     if (!playerId) return null;
+    const raw = await this.redis.get(this.accountKey(playerId));
+    return raw ? JSON.parse(raw) : null;
+  }
+  async getAccountById(playerId) {
     const raw = await this.redis.get(this.accountKey(playerId));
     return raw ? JSON.parse(raw) : null;
   }
