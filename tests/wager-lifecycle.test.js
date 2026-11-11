@@ -106,25 +106,10 @@ test("full multiplayer wager lifecycle locks both wallets, starts PvP, and pays 
 
 test("disconnect before the match refunds both locked stakes", async () => {
   const harness = createHarness();
-  const { host, hostIdentity, guestIdentity } = await createAcceptedRoom(harness);
+  const { host, guest, hostIdentity, guestIdentity } = await createAcceptedRoom(harness);
 
   await host.trigger("wager:propose", { code: "4827", stake: 150 });
-  const guest = [...harness.emitted].find((entry) => entry.event === "wager:state" && entry.payload.status === "proposed");
-  assert.ok(guest);
-  const guestSocket = harness.connect("guest-socket-extra");
-  // The actual guest accepted the join and owns the pending wager response.
-  await harness.roomManager.update("4827", (room) => { room.wager.guestAccepted = false; });
-  const originalGuest = harness.roomManager.get("4827").guest;
-  assert.equal(originalGuest.socketId, "guest-socket");
-
-  // Trigger the accepted response from the joined guest socket.
-  const joinedGuest = harness.connect("guest-socket-accepted");
-  void guestSocket;
-  void joinedGuest;
-  // Use the existing socket captured by the room's guest membership.
-  const realGuest = harness.connect("guest-socket");
-  await realGuest.trigger("identity:register", { username: "GuestPlayer", token: guestIdentity.token });
-  await realGuest.trigger("wager:respond", { code: "4827", accepted: true });
+  await guest.trigger("wager:respond", { code: "4827", accepted: true });
 
   const locked = harness.roomManager.get("4827");
   assert.equal(locked.wager.status, "locked");
