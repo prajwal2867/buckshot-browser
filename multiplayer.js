@@ -622,7 +622,6 @@
       return;
     }
     if (panel.hidden || storyMode.hidden === false) return;
-    if (el.game.hidden === false) return;
 
     const target = event.target;
     const isTyping = target instanceof HTMLElement && (
@@ -633,7 +632,12 @@
     const key = event.key;
     let action = null;
 
-    if (el.room.hidden) {
+    if (!el.game.hidden) {
+      if (key === "1") action = el.shootOpponent;
+      else if (key === "2") action = el.shootSelf;
+      else if (key === "3") action = el.inventory.querySelector("button");
+      else if (key === "4") action = el.leave;
+    } else if (el.room.hidden) {
       if (el.joinForm.hidden) {
         if (key === "1") action = el.create;
         if (key === "2") action = el.joinOpen;
