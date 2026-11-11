@@ -943,7 +943,7 @@
     }
 
     render() {
-      document.body.classList.toggle("main-menu", this.mode === "menu");
+      document.body?.classList?.toggle("main-menu", this.mode === "menu");
       if (this.mode === "menu") {
         screen.innerHTML = [
           '<span class="title">BUCKSHOT ROULETTE</span>', "",
