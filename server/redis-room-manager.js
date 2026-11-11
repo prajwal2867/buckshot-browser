@@ -135,7 +135,7 @@ class RedisRoomManager {
   async getRoomForSocket(socketId) {
     const membership = await this.redis.get(this.socketKey(socketId));
     if (!membership) return null;
-    const match = /^(?:host|guest|pending):(\\d{4})$/.exec(membership);
+    const match = /^(?:host|guest|pending):(\d{4})$/.exec(membership);
     return match ? this.get(match[1]) : null;
   }
 
