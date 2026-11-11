@@ -47,8 +47,6 @@
       this.opponent = this.dealer;
       this.mode = "menu";
       this.gameMode = "story";
-      this.tutorialReturnMode = "bet";
-      this.tutorialSeen = this.loadTutorialSeen();
       this.bankruptcyDeferred = false;
       this.balance = this.loadBalance();
       this.mode = "menu";
@@ -109,29 +107,11 @@
       const command = String(raw).trim().toLowerCase();
       if (this.mode === "menu") {
         if (command === "1") {
-          if (!this.tutorialSeen) {
-            this.tutorialReturnMode = "bet";
-            this.mode = "tutorial";
-          } else {
-            this.mode = this.balance <= 300 && !this.bankruptcyDeferred ? "bankruptcy" : "bet";
-          }
+          this.mode = this.balance <= 300 && !this.bankruptcyDeferred ? "bankruptcy" : "bet";
           this.render();
         } else if (command === "2") {
           window.dispatchEvent(new CustomEvent("buckshot:mode", { detail: "multiplayer" }));
         }
-        return;
-      }
-      if (this.mode === "tutorial") {
-        if (["1", "2", "y", "n", ""].includes(command)) {
-          this.tutorialSeen = true;
-          try { window.localStorage?.setItem("buckshot-browser.tutorial-seen", "true"); } catch {}
-          this.mode = this.tutorialReturnMode === "menu"
-            ? "menu"
-            : (this.balance <= 300 && !this.bankruptcyDeferred ? "bankruptcy" : "bet");
-        } else {
-          this.addEvent("Press 1 to continue or 2 to skip this guide.");
-        }
-        this.render();
         return;
       }
       if (this.mode === "bet") {
@@ -195,14 +175,6 @@
       else if (command === "3") this.openInventory();
       else this.addEvent("Choose 1, 2, or 3.");
       this.afterPlayerCommand();
-    }
-
-    loadTutorialSeen() {
-      try {
-        return window.localStorage?.getItem("buckshot-browser.tutorial-seen") === "true";
-      } catch {
-        return false;
-      }
     }
 
     loadBalance() {
@@ -1000,35 +972,6 @@
         input.placeholder = "";
         keypadButtons.forEach((button) => button.disabled = false);
         if (!input.readOnly) input.focus();
-        return;
-      }
-
-      if (this.mode === "tutorial") {
-        screen.innerHTML = [
-          '<span class="title">HOW TO PLAY</span>', "",
-          "YOUR OBJECTIVE",
-          "Reduce the Dealer's health to zero before yours reaches zero.",
-          "",
-          "YOUR TURN",
-          "1. Shoot the Dealer — use a shell against the Dealer.",
-          "2. Shoot Yourself — a blank keeps your turn; a live shell hurts you.",
-          "3. Use an Item — inspect your inventory and choose an item.",
-          "",
-          "READ THE TABLE",
-          "Live and blank shell counts are shown, but their order is hidden.",
-          "Items reveal information, change shells, heal, or control turns.",
-          "The event log records important actions and results.",
-          "",
-          "BETTING",
-          "Your stake is deducted before the match. A win returns 2× your stake.",
-          "Choose 0 if you want to play without a wager.",
-          "",
-          "1. CONTINUE    2. SKIP GUIDE"
-        ].join("\\n");
-        promptLabel.textContent = "Press 1 to continue or 2 to skip:";
-        input.disabled = false;
-        if (!input.readOnly) input.focus();
-        keypadButtons.forEach((b) => b.disabled = false);
         return;
       }
 
