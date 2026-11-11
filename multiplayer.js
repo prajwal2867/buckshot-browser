@@ -239,6 +239,10 @@
     }
   }
 
+  window.addEventListener("buckshot:mode", (event) => {
+    if (event.detail === "multiplayer") showMode("multiplayer");
+  });
+
   el.open.addEventListener("click", () => showMode("multiplayer"));
   el.storyOpen.addEventListener("click", () => showMode("story"));
   el.saveUsername.addEventListener("click", () => {
