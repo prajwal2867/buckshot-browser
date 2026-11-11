@@ -13,7 +13,6 @@ body {
 
 .site-header {
   display: none;
-  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -22,6 +21,7 @@ body {
   padding-bottom: 10px;
   border-bottom: 1px solid #333;
 }
+.site-header.multiplayer-active { display: flex; }
 .mode-switch { display: flex; gap: 8px; }
 .mode-button { border-color: #555; background: transparent; }
 .mode-button.active { border-color: #aaa; background: #292929; color: #fff; }
