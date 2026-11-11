@@ -979,8 +979,9 @@
         screen.innerHTML = [
           '<span class="title">BUCKSHOT ROULETTE</span>', "",
           `CURRENT BALANCE: ${this.balance.toLocaleString()}`,
+          '<span class="bet-note">[ WINNING BET PAYS OUT DOUBLE YOUR STAKE ]</span>'
         ].join("\n");
-        promptLabel.innerHTML = '&gt; ENTER BET AMOUNT:<span class="bet-note">[ WINNING BET PAYS OUT DOUBLE YOUR STAKE ]</span>';
+        promptLabel.textContent = "> ENTER BET AMOUNT:";
         input.disabled = false;
         if (!input.readOnly) input.focus();
         keypadButtons.forEach((b) => b.disabled = false);
