@@ -401,7 +401,7 @@ body.main-menu #screen {
 body.main-menu #command-form {
   display: flex !important;
   width: 100%;
-  margin-top: .4rem;
+  margin-top: 1.25rem;
 }
 body.main-menu #command-input {
   flex: 0 1 18ch;
