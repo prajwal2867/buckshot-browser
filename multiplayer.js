@@ -372,9 +372,15 @@
     el.game.hidden = false;
     el.start.hidden = true;
     el.balance.textContent = "CURRENT BALANCE: $" + (walletState?.balance ?? "—");
-    el.wager.textContent = currentWager
-      ? "ACTIVE BET: $" + currentWager.stake + " | WIN: +$" + currentWager.stake + " | POT: $" + currentWager.pot
-      : "NO ACTIVE BET";
+    if (currentWager?.status === "settled") {
+      el.wager.textContent = "BET SETTLED | POT PAID: $" + currentWager.pot;
+    } else if (currentWager?.status === "refunded") {
+      el.wager.textContent = "BET REFUNDED";
+    } else if (currentWager?.status === "locked") {
+      el.wager.textContent = "ACTIVE BET: $" + currentWager.stake + " | WIN: +$" + currentWager.stake + " | POT: $" + currentWager.pot;
+    } else {
+      el.wager.textContent = "NO ACTIVE BET";
+    }
     el.status.textContent = state.status === "finished" ? "Match finished." : "Match in progress.";
     el.turn.textContent = state.status === "finished"
       ? (state.winner || "A player") + " wins."
