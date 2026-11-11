@@ -47,7 +47,7 @@
       </div>
 
       <div id="multiplayer-room" hidden>
-        <p id="multiplayer-status" class="status-line" role="status">Connecting...</p>
+        <p id="multiplayer-status" class="status-line" role="status" aria-live="polite">Connecting...</p>
         <div id="join-request" class="join-request" hidden>
           <p>&gt; <strong id="join-request-name"></strong> wants to join ...</p>
           <div class="inline-controls">
@@ -67,7 +67,7 @@
         <button id="game-start" type="button" hidden>Start match</button>
         <section id="pvp-game" class="pvp-game" hidden aria-label="PvP match">
           <h2>Match</h2>
-          <p id="pvp-turn" class="status-line"></p>
+          <p id="pvp-turn" class="status-line" role="status" aria-live="polite"></p>
           <div id="pvp-scoreboard" class="pvp-scoreboard"></div>
           <p id="pvp-magazine" class="help-text"></p>
           <p id="pvp-known-shell" class="help-text"></p>
