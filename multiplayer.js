@@ -5,6 +5,7 @@
   const panel = byId("multiplayer-panel");
   const storyMode = byId("story-mode");
   const usernameKey = "buckshot-browser.username";
+  const walletTokenKey = "buckshot-browser.multiplayer-token";
   const usernamePattern = /^[A-Za-z0-9_-]{3,16}$/;
   let socket = null;
   let activeRoomCode = null;
@@ -17,6 +18,10 @@
   let intentionalDisconnect = false;
   let roomExpiryAt = 0;
   let roomExpiryTimer = null;
+  let identityReady = false;
+  let walletState = null;
+  let currentWager = null;
+  const pendingIdentityEmits = [];
 
   const el = {
     identity: byId("multiplayer-identity"), username: byId("multiplayer-username"),
@@ -24,19 +29,28 @@
     lobby: byId("multiplayer-lobby"), playerName: byId("multiplayer-player-name"),
     create: byId("room-create"), joinOpen: byId("room-join-open"),
     joinForm: byId("room-join-form"), joinCode: byId("room-code"),
-    room: byId("multiplayer-room"), status: byId("multiplayer-status"),
+    room: byId("multiplayer-room"), status: byId("multiplayer-status"), wallet: byId("multiplayer-wallet"),
+    wagerPanel: byId("wager-panel"), wagerForm: byId("wager-proposal-form"), wagerStake: byId("wager-stake"),
+    wagerPending: byId("wager-pending"), wagerDescription: byId("wager-description"),
+    wagerAccept: byId("wager-accept"), wagerDecline: byId("wager-decline"), wagerConfirmed: byId("wager-confirmed"),
     message: byId("multiplayer-message"), codeCard: byId("room-code-card"),
     codeDisplay: byId("room-code-display"), request: byId("join-request"),
     requestName: byId("join-request-name"), accept: byId("join-accept"),
     decline: byId("join-decline"), players: byId("room-players"),
     leave: byId("room-leave"), start: byId("game-start"), game: byId("pvp-game"),
     reconnect: byId("multiplayer-reconnect"), expiry: byId("room-expiry"),
-    turn: byId("pvp-turn"), scoreboard: byId("pvp-scoreboard"),
+    balance: byId("pvp-balance"), wager: byId("pvp-wager"), turn: byId("pvp-turn"), scoreboard: byId("pvp-scoreboard"),
     magazine: byId("pvp-magazine"), known: byId("pvp-known-shell"),
     shootOpponent: byId("pvp-shoot-opponent"), shootSelf: byId("pvp-shoot-self"),
     inventory: byId("pvp-inventory"), steal: byId("pvp-steal"), events: byId("pvp-events")
   };
 
+  const getWalletToken = () => { try { return localStorage.getItem(walletTokenKey) || ""; } catch { return ""; } };
+  const setWalletState = (state) => {
+    walletState = state;
+    if (state) el.wallet.textContent = "MULTIPLAYER BALANCE: $" + state.balance + (state.locked ? " | LOCKED: $" + state.locked : "");
+    if (latestGame && !el.game.hidden) renderGame(latestGame);
+  };
   const getUsername = () => {
     try { return localStorage.getItem(usernameKey) || ""; } catch { return ""; }
   };
@@ -104,14 +118,39 @@
     socket = window.io({ path: "/api/socket", addTrailingSlash: false, transports: ["websocket"] });
     socket.on("connect", () => {
       el.reconnect.hidden = true;
+      identityReady = false;
+      socket.emit("identity:register", { username: getUsername(), token: getWalletToken() });
       if (wasDisconnected) {
         wasDisconnected = false;
-        setMessage("Reconnected. Your previous room could not be restored; create a new room or join again.");
-      } else setMessage("Connected to multiplayer server.");
+        setMessage("Reconnected. Your wallet is being restored; create a new room or join again.");
+      } else setMessage("Connected. Loading your multiplayer wallet...");
+    });
+    socket.on("identity:ready", (data) => {
+      identityReady = true;
+      try { localStorage.setItem(walletTokenKey, data.token); } catch {}
+      setWalletState({ balance: data.balance, locked: data.locked, username: data.username });
+      while (pendingIdentityEmits.length) {
+        const pending = pendingIdentityEmits.shift();
+        socket.emit(pending.eventName, pending.payload);
+      }
+      setMessage("Multiplayer wallet ready.");
+    });
+    socket.on("identity:error", (data) => {
+      identityReady = false;
+      setMessage(data?.message || "Could not load your multiplayer wallet.");
+    });
+    socket.on("wallet:state", setWalletState);
+    socket.on("wager:state", (wager) => {
+      currentWager = wager;
+      renderWager();
+    });
+    socket.on("wager:error", (data) => {
+      setMessage(data?.message || "Could not process that wager.");
     });
     socket.on("disconnect", () => {
       if (intentionalDisconnect) return;
       wasDisconnected = true;
+      identityReady = false;
       clearRoomExpiryCountdown();
       actionPending = false;
       roomRequestPending = false;
@@ -176,6 +215,8 @@
       isHost = true;
       el.room.hidden = false;
       el.lobby.hidden = true;
+      currentWager = null;
+      el.wagerPanel.hidden = true;
       el.status.textContent = "Room ready. Share the code and wait for your opponent.";
       el.expiry.textContent = "Rooms close after 5 minutes without activity. Start the match soon.";
       el.codeCard.hidden = false;
@@ -236,8 +277,13 @@
       el.players.hidden = false;
       el.players.textContent = "> " + data.host.username + " vs " + data.guest.username;
       el.status.textContent = "Opponent connected. The host can start when both players are ready.";
-      el.start.hidden = false;
+      el.start.hidden = true;
       el.start.textContent = "Start [ 1 ]";
+      el.wagerPanel.hidden = false;
+      el.wagerForm.hidden = false;
+      el.wagerPending.hidden = true;
+      el.wagerConfirmed.hidden = true;
+      currentWager = null;
       el.leave.textContent = "Leave [ 2 ]";
       setMessage("");
     });
@@ -253,11 +299,17 @@
       el.players.textContent = "> " + data.host.username + " vs " + data.guest.username;
       el.status.textContent = "You are in. Waiting for the host to start the match.";
       el.start.hidden = true;
+      el.wagerPanel.hidden = false;
+      el.wagerForm.hidden = true;
+      el.wagerPending.hidden = true;
+      el.wagerConfirmed.hidden = true;
+      currentWager = null;
       el.leave.textContent = "> LEAVE ROOM [ 1 ]";
       setMessage("");
     });
     socket.on("game:started", () => {
       el.start.hidden = true;
+      el.wagerPanel.hidden = true;
       el.status.textContent = "MATCH IN PROGRESS";
       setMessage("The match has started.");
     });
@@ -273,17 +325,62 @@
   function emitWhenConnected(eventName, payload) {
     const connection = ensureSocket();
     if (!connection) return false;
-    if (connection.connected) connection.emit(eventName, payload);
+    if (identityReady && connection.connected) connection.emit(eventName, payload);
     else {
-      setMessage("Connecting to multiplayer server...");
-      connection.once("connect", () => connection.emit(eventName, payload));
+      pendingIdentityEmits.push({ eventName, payload });
+      setMessage("Loading your multiplayer wallet...");
     }
     return true;
+  }
+
+  function renderWager() {
+    if (el.wagerPanel.hidden) return;
+    const status = currentWager?.status || "none";
+    el.wagerForm.hidden = !isHost || !["none", "declined", "rejected", "refunded"].includes(status);
+    el.wagerPending.hidden = !(status === "proposed" && !isHost);
+    el.wagerConfirmed.hidden = !["locked", "settled", "refunded"].includes(status);
+    if (status === "proposed") {
+      el.wagerDescription.textContent = "OPPONENT PROPOSES $" + currentWager.stake + " | YOUR POTENTIAL POT: $" + currentWager.pot;
+      if (isHost) {
+        el.wagerPending.hidden = false;
+        el.wagerAccept.hidden = true;
+        el.wagerDecline.hidden = true;
+      } else {
+        el.wagerAccept.hidden = false;
+        el.wagerDecline.hidden = false;
+      }
+    }
+    if (status === "locked") {
+      el.wagerConfirmed.textContent = "BET LOCKED: $" + currentWager.stake + " EACH | POT: $" + currentWager.pot + " | HOST CAN START";
+      el.start.hidden = !isHost;
+    } else if (status === "settled") {
+      el.wagerConfirmed.textContent = "BET SETTLED. WINNER PAID $" + currentWager.pot + ".";
+      el.start.hidden = true;
+    } else if (status === "refunded") {
+      el.wagerConfirmed.textContent = "BET REFUNDED. BOTH PLAYERS' STAKES RETURNED.";
+      el.start.hidden = true;
+    } else if (status === "declined" || status === "rejected") {
+      el.wagerConfirmed.textContent = status === "declined" ? "BET REJECTED. HOST MAY PROPOSE ANOTHER." : "BET COULD NOT BE LOCKED. TRY ANOTHER AMOUNT.";
+      el.wagerConfirmed.hidden = false;
+      el.start.hidden = true;
+    } else if (status === "none") {
+      el.start.hidden = true;
+    }
   }
 
   function renderGame(state) {
     el.game.hidden = false;
     el.start.hidden = true;
+    el.balance.textContent = "CURRENT BALANCE: $" + (walletState?.balance ?? "—");
+    if (currentWager?.status === "settled") {
+      el.wager.textContent = "BET SETTLED | POT PAID: $" + currentWager.pot;
+    } else if (currentWager?.status === "refunded") {
+      el.wager.textContent = "BET REFUNDED";
+    } else if (currentWager?.status === "locked") {
+      el.wager.textContent = "ACTIVE BET: $" + currentWager.stake + " | WIN: +$" + currentWager.stake + " | POT: $" + currentWager.pot;
+    } else {
+      el.wager.textContent = "NO ACTIVE BET";
+    }
     el.status.textContent = state.status === "finished" ? "Match finished." : "Match in progress.";
     el.turn.textContent = state.status === "finished"
       ? (state.winner || "A player") + " wins."
@@ -336,6 +433,24 @@
       el.events.append(line);
     });
   }
+
+  el.wagerForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const stake = Number(el.wagerStake.value);
+    if (!Number.isSafeInteger(stake) || stake < 10 || stake > 1000) {
+      setMessage("Choose a whole-number stake between $10 and $1,000.");
+      return;
+    }
+    if (!activeRoomCode || !socket?.connected) return setMessage("Connect to a room before proposing a bet.");
+    socket.emit("wager:propose", { code: activeRoomCode, stake });
+    setMessage("Sending your wager proposal...");
+  });
+  el.wagerAccept.addEventListener("click", () => {
+    if (socket?.connected && activeRoomCode) socket.emit("wager:respond", { code: activeRoomCode, accepted: true });
+  });
+  el.wagerDecline.addEventListener("click", () => {
+    if (socket?.connected && activeRoomCode) socket.emit("wager:respond", { code: activeRoomCode, accepted: false });
+  });
 
   function sendAction(action) {
     if (actionPending) return;
@@ -410,7 +525,7 @@
     roomRequestPending = true;
     el.create.disabled = true;
     setMessage("Creating your room…");
-    if (!emitWhenConnected("room:create", { username: getUsername() })) {
+    if (!emitWhenConnected("room:create", {})) {
       roomRequestPending = false;
       el.create.disabled = false;
     }
@@ -427,7 +542,7 @@
     roomRequestPending = true;
     el.joinOpen.disabled = true;
     setMessage("Sending your join request…");
-    if (!emitWhenConnected("room:join", { code, username: getUsername() })) {
+    if (!emitWhenConnected("room:join", { code })) {
       roomRequestPending = false;
       el.joinOpen.disabled = false;
     }
@@ -448,7 +563,7 @@
     setMessage("Join request declined.");
   });
   el.start.addEventListener("click", () => {
-    if (!isHost || !socket?.connected || !activeRoomCode || el.start.disabled) return;
+    if (!isHost || !socket?.connected || !activeRoomCode || el.start.disabled || currentWager?.status !== "locked") return;
     el.start.disabled = true;
     el.status.textContent = "Starting match…";
     socket.emit("game:start", { code: activeRoomCode });
@@ -519,6 +634,8 @@
     pendingRequest = null;
     isHost = false;
     latestGame = null;
+    currentWager = null;
+    identityReady = false;
     el.game.hidden = true;
     el.start.hidden = true;
     el.room.hidden = true;

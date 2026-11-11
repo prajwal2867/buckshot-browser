@@ -36,7 +36,7 @@ const RESPOND = `
   room.pending = cjson.null
   room.updatedAt = tonumber(ARGV[4])
   if ARGV[3] == "1" then
-    room.guest = {socketId = guest.socketId, username = guest.username}
+    room.guest = {socketId = guest.socketId, playerId = guest.playerId, username = guest.username}
     room.status = "lobby"
     redis.call("SET", ARGV[6] .. guest.socketId, "guest:" .. room.code, "EX", ARGV[5])
   end
@@ -80,7 +80,15 @@ const DISCONNECT = `
 const COMPARE_AND_SET = `
   local current = redis.call("GET", KEYS[1])
   if not current or current ~= ARGV[1] then return 0 end
+  local room = cjson.decode(ARGV[2])
   redis.call("SET", KEYS[1], ARGV[2], "EX", ARGV[3])
+  redis.call("SET", ARGV[4] .. room.host.socketId, "host:" .. room.code, "EX", ARGV[3])
+  if room.guest ~= nil and room.guest ~= cjson.null then
+    redis.call("SET", ARGV[4] .. room.guest.socketId, "guest:" .. room.code, "EX", ARGV[3])
+  end
+  if room.pending ~= nil and room.pending ~= cjson.null then
+    redis.call("SET", ARGV[4] .. room.pending.socketId, "pending:" .. room.code, "EX", ARGV[3])
+  end
   return 1
 `;
 
@@ -99,8 +107,8 @@ class RedisRoomManager {
     for (let attempt = 0; attempt < 30; attempt++) {
       const code = this.randomCode();
       if (!/^\d{4}$/.test(code)) continue;
-      const room = { code, status: "waiting", host: { socketId: host.socketId, username: host.username },
-        guest: null, pending: null, game: null, createdAt: now, updatedAt: now };
+      const room = { code, status: "waiting", host: { socketId: host.socketId, playerId: host.playerId, username: host.username },
+        guest: null, pending: null, game: null, wager: null, createdAt: now, updatedAt: now };
       const result = await this.redis.eval(CREATE_ROOM, 2, this.roomKey(code), this.socketKey(host.socketId),
         JSON.stringify(room), this.ttlSeconds, code);
       if (result === 1) return room;
@@ -109,10 +117,10 @@ class RedisRoomManager {
     throw new Error("No room codes are currently available. Try again.");
   }
 
-  async requestJoin({ socketId, username, code }, now = Date.now()) {
+  async requestJoin({ socketId, playerId, username, code }, now = Date.now()) {
     if (!/^\d{4}$/.test(String(code))) return { ok: false, error: "Invalid code." };
     const response = await this.redis.eval(REQUEST_JOIN, 2, this.roomKey(String(code)), this.socketKey(socketId),
-      socketId, JSON.stringify({ requestId: crypto.randomUUID(), socketId, username }), now, this.ttlSeconds, this.keyPrefix);
+      socketId, JSON.stringify({ requestId: crypto.randomUUID(), socketId, playerId, username }), now, this.ttlSeconds, this.keyPrefix);
     if (response[0] !== "ok") return { ok: false, error: response[1] };
     return { ok: true, requestId: response[1], hostSocketId: response[2], code: response[3], hostUsername: response[4] };
   }
@@ -132,6 +140,13 @@ class RedisRoomManager {
     return raw ? JSON.parse(raw) : null;
   }
 
+  async getRoomForSocket(socketId) {
+    const membership = await this.redis.get(this.socketKey(socketId));
+    if (!membership) return null;
+    const match = /^(?:host|guest|pending):(\d{4})$/.exec(membership);
+    return match ? this.get(match[1]) : null;
+  }
+
   async update(code, updater) {
     const key = this.roomKey(String(code));
     for (let attempt = 0; attempt < 12; attempt++) {
@@ -141,7 +156,7 @@ class RedisRoomManager {
       updater(room);
       room.updatedAt = Date.now();
       const next = JSON.stringify(room);
-      const saved = await this.redis.eval(COMPARE_AND_SET, 1, key, raw, next, this.ttlSeconds);
+      const saved = await this.redis.eval(COMPARE_AND_SET, 1, key, raw, next, this.ttlSeconds, this.keyPrefix + "socket:");
       if (saved === 1) return room;
     }
     throw new Error("The room is busy. Please retry your action.");

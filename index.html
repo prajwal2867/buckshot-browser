@@ -45,6 +45,7 @@
 
       <div id="multiplayer-room" hidden>
         <p id="multiplayer-status" class="status-line" role="status" aria-live="polite">Connecting...</p>
+        <p id="multiplayer-wallet" class="help-text">MULTIPLAYER BALANCE: Loading...</p>
         <div id="join-request" class="join-request" hidden>
           <p>&gt; <strong id="join-request-name"></strong> wants to join ...</p>
           <div class="inline-controls">
@@ -57,9 +58,29 @@
 
         </div>
         <div id="room-players" class="room-players" hidden></div>
+        <section id="wager-panel" class="wager-panel" hidden aria-label="Match wager">
+          <form id="wager-proposal-form" class="wager-proposal-form">
+            <label for="wager-stake">Enter bet amount:</label>
+            <div class="inline-controls">
+              <input id="wager-stake" type="number" min="10" max="1000" step="1" value="200" required>
+              <button type="submit">Propose bet</button>
+            </div>
+            <p class="help-text">Both players stake the same amount. Winner receives the full 2× pot.</p>
+          </form>
+          <div id="wager-pending" hidden>
+            <p id="wager-description" class="status-line"></p>
+            <div class="inline-controls">
+              <button id="wager-accept" type="button">Accept bet</button>
+              <button id="wager-decline" class="secondary-button" type="button">Reject bet</button>
+            </div>
+          </div>
+          <p id="wager-confirmed" class="status-line" hidden></p>
+        </section>
         <button id="game-start" type="button" hidden>Start match</button>
         <section id="pvp-game" class="pvp-game" hidden aria-label="PvP match">
           <h2>Match</h2>
+          <p id="pvp-balance" class="help-text"></p>
+          <p id="pvp-wager" class="help-text"></p>
           <p id="pvp-turn" class="status-line" role="status" aria-live="polite"></p>
           <div id="pvp-scoreboard" class="pvp-scoreboard"></div>
           <p id="pvp-magazine" class="help-text"></p>

@@ -7,6 +7,7 @@ const { createAdapter } = require("@socket.io/redis-adapter");
 const { RedisRoomManager } = require("../server/redis-room-manager");
 const { attachRoomHandlers } = require("../server/room-handlers");
 const { attachGameHandlers } = require("../server/game-handlers");
+const { RedisWalletManager } = require("../server/wallet-manager");
 
 const httpServer = http.createServer();
 const io = new Server(httpServer, {
@@ -42,8 +43,9 @@ if (!redisUrl) {
   const stateClient = publisher.duplicate();
   io.adapter(createAdapter(publisher, subscriber));
   const roomManager = new RedisRoomManager(stateClient);
-  attachRoomHandlers(io, roomManager);
-  attachGameHandlers(io, roomManager);
+  const walletManager = new RedisWalletManager(stateClient);
+  attachRoomHandlers(io, roomManager, walletManager);
+  attachGameHandlers(io, roomManager, walletManager);
 }
 
 module.exports = httpServer;

@@ -29,8 +29,8 @@ class RoomManager {
 
     const room = {
       code, status: "waiting",
-      host: { socketId: host.socketId, username: host.username },
-      guest: null, pending: null, game: null,
+      host: { socketId: host.socketId, playerId: host.playerId, username: host.username },
+      guest: null, pending: null, game: null, wager: null,
       createdAt: now, updatedAt: now
     };
     this.rooms.set(code, room);
@@ -38,7 +38,7 @@ class RoomManager {
     return room;
   }
 
-  requestJoin({ socketId, username, code }, now = Date.now()) {
+  requestJoin({ socketId, playerId, username, code }, now = Date.now()) {
     this.expire(now);
     if (!/^\d{4}$/.test(String(code))) return { ok: false, error: "Invalid code." };
     const room = this.rooms.get(String(code));
@@ -48,7 +48,7 @@ class RoomManager {
     if (room.pending) return { ok: false, error: "This room already has a pending request." };
 
     const requestId = crypto.randomUUID();
-    room.pending = { requestId, socketId, username };
+    room.pending = { requestId, socketId, playerId, username };
     this.socketRooms.set(socketId, { code: room.code, role: "pending" });
     room.updatedAt = now;
     return { ok: true, requestId, hostSocketId: room.host.socketId, code: room.code, hostUsername: room.host.username };
@@ -65,7 +65,7 @@ class RoomManager {
     room.updatedAt = now;
     if (!accepted) return { ok: true, accepted: false, guestSocketId: pending.socketId };
 
-    room.guest = { socketId: pending.socketId, username: pending.username };
+    room.guest = { socketId: pending.socketId, playerId: pending.playerId, username: pending.username };
     this.socketRooms.set(pending.socketId, { code: room.code, role: "guest" });
     room.status = "lobby";
     return { ok: true, accepted: true, code: room.code, host: room.host, guest: room.guest, guestSocketId: pending.socketId };
@@ -73,6 +73,11 @@ class RoomManager {
 
   get(code) {
     return this.rooms.get(String(code)) || null;
+  }
+
+  getRoomForSocket(socketId) {
+    const membership = this.socketRooms.get(socketId);
+    return membership ? this.get(membership.code) : null;
   }
 
   update(code, updater) {

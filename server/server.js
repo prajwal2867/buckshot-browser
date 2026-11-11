@@ -7,8 +7,9 @@ const { Server } = require("socket.io");
 const { RoomManager } = require("./room-manager");
 const { attachRoomHandlers } = require("./room-handlers");
 const { attachGameHandlers } = require("./game-handlers");
+const { MemoryWalletManager } = require("./wallet-manager");
 
-function createAppServer({ roomManager = new RoomManager() } = {}) {
+function createAppServer({ roomManager = new RoomManager(), walletManager = new MemoryWalletManager() } = {}) {
   const app = express();
   const httpServer = http.createServer(app);
   const io = new Server(httpServer, { path: "/api/socket", addTrailingSlash: false });
@@ -19,8 +20,8 @@ function createAppServer({ roomManager = new RoomManager() } = {}) {
   app.use(express.static(publicRoot, { index: "index.html", etag: true, maxAge: "1h" }));
   app.get("/health", (_req, res) => res.json({ ok: true, service: "buckshot-multiplayer-local" }));
 
-  attachRoomHandlers(io, roomManager);
-  attachGameHandlers(io, roomManager);
+  attachRoomHandlers(io, roomManager, walletManager);
+  attachGameHandlers(io, roomManager, walletManager);
 
   return { app, httpServer, io, roomManager, expiryTimer };
 }
