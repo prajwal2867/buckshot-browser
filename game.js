@@ -23,6 +23,17 @@
     "Adrenaline", "Burner Phone", "Inverter", "Expired Medicine"
   ];
   const ALL_ITEMS = [...BASE_ITEMS, ...EXTRA_ITEMS];
+  const ITEM_HELP = {
+    "Magnifying Glass": "Reveal the shell currently in the chamber.",
+    "Handcuffs": "Make the Dealer miss their next turn.",
+    "Beer": "Eject the current shell without firing it.",
+    "Cigarette Pack": "Restore 1 health, up to your normal maximum.",
+    "Hand Saw": "Your next live shot deals 2 damage.",
+    "Adrenaline": "Steal and immediately use one of the Dealer's usable items.",
+    "Burner Phone": "Reveal one upcoming shell in the magazine.",
+    "Inverter": "Turn the current shell from live to blank, or blank to live.",
+    "Expired Medicine": "A 50/50 chance to restore up to 2 health or lose 1."
+  };
 
   const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
   const randomInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
@@ -36,6 +47,8 @@
       this.opponent = this.dealer;
       this.mode = "menu";
       this.gameMode = "story";
+      this.tutorialReturnMode = "bet";
+      this.tutorialSeen = this.loadTutorialSeen();
       this.bankruptcyDeferred = false;
       this.balance = this.loadBalance();
       this.mode = "menu";
@@ -72,7 +85,7 @@
       });
       document?.addEventListener?.("keydown", (event) => {
         if (this.mode !== "menu" || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
-        if (event.key === "1" || event.key === "2") {
+        if (event.key === "1" || event.key === "2" || event.key === "3") {
           event.preventDefault();
           this.submit(event.key);
         }
@@ -105,11 +118,33 @@
       const command = String(raw).trim().toLowerCase();
       if (this.mode === "menu") {
         if (command === "1") {
-          this.mode = this.balance <= 300 && !this.bankruptcyDeferred ? "bankruptcy" : "bet";
+          if (!this.tutorialSeen) {
+            this.tutorialReturnMode = "bet";
+            this.mode = "tutorial";
+          } else {
+            this.mode = this.balance <= 300 && !this.bankruptcyDeferred ? "bankruptcy" : "bet";
+          }
           this.render();
         } else if (command === "2") {
           window.dispatchEvent(new CustomEvent("buckshot:mode", { detail: "multiplayer" }));
+        } else if (command === "3") {
+          this.tutorialReturnMode = "menu";
+          this.mode = "tutorial";
+          this.render();
         }
+        return;
+      }
+      if (this.mode === "tutorial") {
+        if (["1", "2", "y", "n", ""].includes(command)) {
+          this.tutorialSeen = true;
+          try { window.localStorage?.setItem("buckshot-browser.tutorial-seen", "true"); } catch {}
+          this.mode = this.tutorialReturnMode === "menu"
+            ? "menu"
+            : (this.balance <= 300 && !this.bankruptcyDeferred ? "bankruptcy" : "bet");
+        } else {
+          this.addEvent("Press 1 to continue or 2 to skip this guide.");
+        }
+        this.render();
         return;
       }
       if (this.mode === "bet") {
@@ -151,7 +186,12 @@
           this.render();
           return;
         }
-        this.start(command === "2" ? "double" : "story");
+        if (command === "2") this.start("double");
+        else if (command === "1" || command === "") this.start("story");
+        else {
+          this.addEvent("Choose 1 for Story Mode or 2 for Double or Nothing.");
+          this.render();
+        }
         return;
       }
       if (this.mode === "restart") {
@@ -182,6 +222,14 @@
       else if (command === "3") this.openInventory();
       else this.addEvent("Choose 1, 2, or 3.");
       this.afterPlayerCommand();
+    }
+
+    loadTutorialSeen() {
+      try {
+        return window.localStorage?.getItem("buckshot-browser.tutorial-seen") === "true";
+      } catch {
+        return false;
+      }
     }
 
     loadBalance() {
@@ -626,8 +674,10 @@
         return;
       }
       this.mode = "item";
-      this.addEvent("Choose an item number (0 to return):");
-      this.player.inventory.forEach((item, i) => this.addEvent(`${i + 1}. ${item}`));
+      this.addEvent("Choose an item number (0 to return). Item effects:");
+      this.player.inventory.forEach((item, i) =>
+        this.addEvent(`${i + 1}. ${item} — ${ITEM_HELP[item] || "Use this item strategically."}`)
+      );
     }
 
     selectItem(command) {
@@ -951,6 +1001,7 @@
           '<div class="menu-options">',
           '<button class="menu-choice" type="button" data-main-mode="1">&gt; [ 1 ] : STORY MODE</button>',
           '<button class="menu-choice" type="button" data-main-mode="2">&gt; [ 2 ] : MULTIPLAYER</button>',
+          '<button class="menu-choice" type="button" data-main-mode="3">&gt; [ 3 ] : HOW TO PLAY</button>',
           '</div>',
           "",
           "Select mode:"
@@ -958,6 +1009,35 @@
         promptLabel.textContent = "Select mode:";
         input.disabled = true;
         keypadButtons.forEach((button) => button.disabled = true);
+        return;
+      }
+
+      if (this.mode === "tutorial") {
+        screen.innerHTML = [
+          '<span class="title">HOW TO PLAY</span>', "",
+          "YOUR OBJECTIVE",
+          "Reduce the Dealer's health to zero before yours reaches zero.",
+          "",
+          "YOUR TURN",
+          "1. Shoot the Dealer — use a shell against the Dealer.",
+          "2. Shoot Yourself — a blank keeps your turn; a live shell hurts you.",
+          "3. Use an Item — inspect your inventory and choose an item.",
+          "",
+          "READ THE TABLE",
+          "Live and blank shell counts are shown, but their order is hidden.",
+          "Items reveal information, change shells, heal, or control turns.",
+          "The event log records important actions and results.",
+          "",
+          "BETTING",
+          "Your stake is deducted before the match. A win returns 2× your stake.",
+          "Choose 0 if you want to play without a wager.",
+          "",
+          "1. CONTINUE    2. SKIP GUIDE"
+        ].join("\\n");
+        promptLabel.textContent = "Press 1 to continue or 2 to skip:";
+        input.disabled = false;
+        if (!input.readOnly) input.focus();
+        keypadButtons.forEach((b) => b.disabled = false);
         return;
       }
 
