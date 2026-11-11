@@ -22,8 +22,8 @@
       <div id="multiplayer-identity">
         <div class="inline-controls">
           <label for="multiplayer-username">Choose your username :</label>
-          <input id="multiplayer-username" maxlength="16" minlength="3" autocomplete="nickname"
-            placeholder="Enter username">
+          <input id="multiplayer-username" maxlength="16" minlength="3" pattern="[A-Za-z0-9_-]{3,16}" autocomplete="nickname"
+            placeholder="3–16 characters">
           <button id="username-save" type="button">Save</button>
         </div>
       </div>
@@ -57,6 +57,11 @@
         </div>
         <div id="room-code-card" hidden>
           <p class="room-code-line">&gt; ROOM CODE: <strong id="room-code-display" class="room-code"></strong></p>
+          <div class="inline-controls">
+            <button id="room-copy-code" type="button">Copy room code</button>
+            <button id="room-copy-invite" type="button">Copy invite message</button>
+          </div>
+          <p id="room-expiry" class="help-text" role="status"></p>
         </div>
         <div id="room-players" class="room-players" hidden></div>
         <button id="game-start" type="button" hidden>Start match</button>
@@ -74,7 +79,10 @@
           <div id="pvp-steal" class="pvp-steal" hidden></div>
           <div id="pvp-events" class="pvp-events" aria-live="polite"></div>
         </section>
-        <button id="room-leave" class="secondary-button" type="button">Leave room</button>
+        <div class="inline-controls">
+          <button id="multiplayer-reconnect" class="secondary-button" type="button" hidden>Reconnect</button>
+          <button id="room-leave" class="secondary-button" type="button">Leave room</button>
+        </div>
       </div>
 
       <p id="multiplayer-message" class="multiplayer-message" role="status" aria-live="polite"></p>
