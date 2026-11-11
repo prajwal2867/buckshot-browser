@@ -103,7 +103,19 @@
       el.start.disabled = false;
       el.accept.disabled = false;
       el.decline.disabled = false;
-      setMessage(data?.message || "Something went wrong. Check the room code and try again.");
+      const message = data?.message || "Something went wrong. Check the room code and try again.";
+      if (/room is no longer ready|room.*expired/i.test(message)) {
+        activeRoomCode = null;
+        pendingRequest = null;
+        isHost = false;
+        latestGame = null;
+        el.room.hidden = true;
+        el.game.hidden = true;
+        showIdentity();
+        setMessage("This room has expired or a player disconnected. Create a new room or join with a fresh code.");
+        return;
+      }
+      setMessage(message);
     });
     socket.on("game:error", (data) => {
       actionPending = false;
