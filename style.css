@@ -196,7 +196,7 @@ body.main-menu #command-form { display: none !important; }
   body {
     box-sizing: border-box;
     min-height: 100vh;
-    padding: 8px;
+    padding: 8px 8px 220px;
   }
   .site-header { flex-wrap: wrap; }
   .mode-switch { gap: 5px; flex-wrap: wrap; }
@@ -211,10 +211,20 @@ body.main-menu #command-form { display: none !important; }
   #command-form { min-height: 32px; }
   #command-input { font-size: 16px; }
   #keypad {
-    display: grid;
+    display: grid !important;
+    position: fixed;
+    z-index: 50;
+    left: 50%;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    box-sizing: border-box;
+    width: min(calc(100vw - 16px), 360px);
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 5px;
-    padding-top: 6px;
+    padding: 8px;
+    border: 1px solid #444;
+    background: #111;
+    box-shadow: 0 -8px 24px rgb(0 0 0 / 45%);
   }
   #keypad button {
     min-width: 0;
@@ -229,7 +239,8 @@ body.main-menu #command-form { display: none !important; }
   }
   #keypad button:active { background: #444; }
   #keypad button:disabled { opacity: 0.45; }
-  #keypad .enter-key { grid-column: span 3; }
+  #keypad .enter-key { grid-column: span 2; }
+  #keypad .escape-key { font-size: 13px; }
 }
 
 #screen .title { font-weight: 700; letter-spacing: 0.035em; }
