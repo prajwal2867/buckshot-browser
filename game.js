@@ -70,6 +70,8 @@
       this.busy = false;
       this.timer = null;
       this.stealTimer = null;
+      this.stealCountdownInterval = null;
+      this.stealDeadline = 0;
       this.setNumber = 1;
       this.winnings = 0;
       this.setStartedAt = 0;
@@ -363,8 +365,11 @@
     reset() {
       if (this.timer) clearTimeout(this.timer);
       if (this.stealTimer) window.clearTimeout(this.stealTimer);
+      if (this.stealCountdownInterval) window.clearInterval(this.stealCountdownInterval);
       this.timer = null;
       this.stealTimer = null;
+      this.stealCountdownInterval = null;
+      this.stealDeadline = 0;
       this.player = this.makeEntity("Player");
       this.dealer = this.makeEntity("Dealer");
       this.current = this.player;
@@ -713,7 +718,10 @@
         return;
       }
       if (this.stealTimer) window.clearTimeout(this.stealTimer);
+      if (this.stealCountdownInterval) window.clearInterval(this.stealCountdownInterval);
       this.stealTimer = null;
+      this.stealCountdownInterval = null;
+      this.stealDeadline = 0;
       const owner = this.stealOwner;
       const victim = owner === this.player ? this.dealer : this.player;
       const victimIndex = victim.inventory.indexOf(item);
@@ -742,6 +750,9 @@
     expireAdrenaline() {
       if (this.mode !== "steal" || this.stealOwner !== this.player) return;
       this.stealTimer = null;
+      if (this.stealCountdownInterval) window.clearInterval(this.stealCountdownInterval);
+      this.stealCountdownInterval = null;
+      this.stealDeadline = 0;
       this.consumeItem(this.player, "Adrenaline");
       this.stealableItems = [];
       this.stealOwner = null;
@@ -841,7 +852,18 @@
             this.stealOwner = owner;
             this.addEvent("Choose an opponent item to steal within 5 seconds:");
             candidates.forEach((candidate, i) => this.addEvent(`${i + 1}. ${candidate}`));
+            this.stealDeadline = Date.now() + 5000;
             this.stealTimer = window.setTimeout(() => this.expireAdrenaline(), 5000);
+            this.stealCountdownInterval = window.setInterval(() => {
+              if (this.mode !== "steal" || this.stealOwner !== this.player) {
+                window.clearInterval(this.stealCountdownInterval);
+                this.stealCountdownInterval = null;
+                return;
+              }
+              const seconds = Math.max(0, Math.ceil((this.stealDeadline - Date.now()) / 1000));
+              const countdown = screen.querySelector("#steal-countdown");
+              if (countdown) countdown.textContent = seconds + (seconds === 1 ? " second remaining" : " seconds remaining");
+            }, 100);
             return "steal";
           }
           const chosen = this.chooseDealerSteal(candidates);
@@ -1126,7 +1148,7 @@
           `${index + 1}. ${item} — ${ITEM_HELP[item] || "Use this item strategically."}`
         ), "0. Return to your actions");
       } else if (this.mode === "steal") {
-        lines.push("ADRENALINE — CHOOSE AN ITEM TO STEAL", "Choose quickly; the opportunity expires after 5 seconds.",
+        lines.push("ADRENALINE — CHOOSE AN ITEM TO STEAL", "Choose quickly; the opportunity expires after 5 seconds.", '<span id="steal-countdown">5 seconds remaining</span>',
           ...this.stealableItems.map((item, index) =>
             `${index + 1}. ${item} — ${ITEM_HELP[item] || "Use this item strategically."}`
           ));
