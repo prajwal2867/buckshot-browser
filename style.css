@@ -344,6 +344,7 @@ body.story-active .event-log {
 body.story-active .bet-note {
   display: block;
   margin-top: .25rem;
+  margin-bottom: .9rem;
   text-align: left;
 }
 body.main-menu {
