@@ -73,14 +73,14 @@
       isHost = true;
       el.room.hidden = false;
       el.lobby.hidden = true;
-      el.status.textContent = "WAITING ...";
+      el.status.textContent = "waiting ...";
       el.codeCard.hidden = false;
       el.codeDisplay.textContent = data.code.split("").join(" ");
       el.request.hidden = true;
       el.players.hidden = true;
       el.start.hidden = true;
       el.game.hidden = true;
-      el.leave.textContent = "LEAVE ROOM [ 1 ]";
+      el.leave.textContent = "> LEAVE ROOM [ 1 ]";
       setMessage("");
     });
     socket.on("room:join-pending", (data) => {
@@ -88,9 +88,9 @@
       isHost = false;
       el.room.hidden = false;
       el.lobby.hidden = true;
-      el.status.textContent = "WAITING ...";
+      el.status.textContent = "waiting ...";
       el.codeCard.hidden = true;
-      el.leave.textContent = "LEAVE ROOM [ 1 ]";
+      el.leave.textContent = "> LEAVE ROOM [ 1 ]";
       setMessage("Request sent to " + data.hostUsername + ".");
     });
     socket.on("room:join-request", (data) => {
@@ -98,7 +98,7 @@
       el.request.hidden = false;
       el.requestName.textContent = data.username;
       el.codeCard.hidden = false;
-      el.leave.textContent = "LEAVE ROOM [ 3 ]";
+      el.leave.textContent = "> LEAVE ROOM [ 3 ]";
       setMessage("");
     });
     socket.on("room:declined", () => {
@@ -114,11 +114,11 @@
       el.request.hidden = true;
       el.codeCard.hidden = true;
       el.players.hidden = false;
-      el.players.textContent = data.host.username + " VS " + data.guest.username;
+      el.players.textContent = "> " + data.host.username + " vs " + data.guest.username;
       el.status.textContent = "";
       el.start.hidden = false;
-      el.start.textContent = "START [ 1 ]";
-      el.leave.textContent = "LEAVE [ 2 ]";
+      el.start.textContent = "Start [ 1 ]";
+      el.leave.textContent = "Leave [ 2 ]";
       setMessage("");
     });
     socket.on("room:joined", (data) => {
@@ -130,10 +130,10 @@
       el.codeDisplay.textContent = data.code.split("").join(" ");
       el.request.hidden = true;
       el.players.hidden = false;
-      el.players.textContent = data.host.username + " VS " + data.guest.username;
+      el.players.textContent = "> " + data.host.username + " vs " + data.guest.username;
       el.status.textContent = "WAITING ...";
       el.start.hidden = true;
-      el.leave.textContent = "LEAVE ROOM [ 1 ]";
+      el.leave.textContent = "> LEAVE ROOM [ 1 ]";
       setMessage("");
     });
     socket.on("game:started", () => {

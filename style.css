@@ -54,47 +54,57 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   margin: 0 auto 20px;
   padding: 0;
   border: 0;
-  border-radius: 0;
   background: transparent;
-  line-height: 1.5;
+  line-height: 1.35;
 }
 .terminal-title {
   margin: 0 0 1.5rem;
-  font-size: 1rem;
+  font-size: .9rem;
   font-weight: 700;
-  letter-spacing: .04em;
+  letter-spacing: .035em;
 }
 .multiplayer-panel [hidden] { display: none !important; }
-.multiplayer-panel label { display: block; margin: 10px 0 6px; font-size: .8rem; }
+.multiplayer-panel label { display: inline-block; margin: 0 8px 0 0; }
 .multiplayer-panel input {
   box-sizing: border-box;
   min-width: 0;
-  width: 100%;
-  padding: 5px 7px;
-  border: 1px solid #666;
+  width: min(100%, 260px);
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid #777;
   border-radius: 0;
-  background: #080808;
+  background: transparent;
   color: #fff;
+  font: inherit;
 }
-.inline-controls { display: flex; align-items: center; gap: 10px; max-width: 520px; }
-.inline-controls input { flex: 1; }
-.multiplayer-panel button { border-radius: 0; background: transparent; }
+.multiplayer-panel input:focus { outline: 0; border-bottom-color: #fff; }
+.inline-controls { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; max-width: 560px; }
+.inline-controls input { flex: 0 1 260px; }
+.multiplayer-panel button {
+  border: 0;
+  border-radius: 0;
+  padding: 2px 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
 .multiplayer-panel button:hover { background: #292929; }
 .multiplayer-panel .help-text,
 .multiplayer-panel .multiplayer-message { color: #aaa; font-size: .72rem; }
-.multiplayer-panel .identity-line { justify-content: flex-start; color: #aaa; font-size: .8rem; }
+.multiplayer-panel .identity-line { margin: 0 0 1rem; color: inherit; }
 .multiplayer-panel .identity-line strong { color: #fff; }
-.multiplayer-panel .status-line { padding: 0; background: transparent; border: 0; font-size: .8rem; }
+.multiplayer-panel .status-line { margin: 0 0 .75rem; padding: 0; background: transparent; border: 0; font-size: inherit; }
 .multiplayer-panel .room-code-line { margin: .75rem 0; }
-.multiplayer-panel .room-code { display: inline-block; font-size: 1.1rem; letter-spacing: .25em; }
-.multiplayer-panel .join-request { margin: 1rem 0; padding: 0; border: 0; }
-.multiplayer-panel .room-players { margin: 1rem 0; font-size: .9rem; color: #fff; }
+.multiplayer-panel .room-code { display: inline-block; font-size: 1rem; letter-spacing: .25em; }
+.multiplayer-panel .join-request { margin: .75rem 0; padding: 0; border: 0; }
+.multiplayer-panel .join-request p { margin: 0 0 .4rem; }
+.multiplayer-panel .room-players { margin: .75rem 0; font-size: inherit; color: #fff; }
 .multiplayer-panel .secondary-button { background: transparent; }
-.multiplayer-panel .multiplayer-message { min-height: 1em; margin: 1rem 0 0; }
-.multiplayer-panel .multiplayer-actions { display: flex; flex-direction: column; align-items: flex-start; gap: .5rem; margin-top: 1rem; }
+.multiplayer-panel .multiplayer-message { min-height: 1em; margin: .75rem 0 0; }
+.multiplayer-panel .multiplayer-actions { display: flex; flex-direction: column; align-items: flex-start; gap: .35rem; margin-top: .75rem; }
 .multiplayer-panel .multiplayer-actions > button { min-height: 0; }
 .multiplayer-panel .multiplayer-actions form { max-width: 420px; }
-.multiplayer-panel .multiplayer-actions form label { margin-top: 1rem; }
+.multiplayer-panel .multiplayer-actions form label { margin: .75rem 8px .4rem 0; }
 .multiplayer-panel .quiet-button,
 .multiplayer-panel .text-button { border: 0; background: transparent; }
 .multiplayer-panel .text-button { padding: 2px 6px; font-size: .75rem; text-decoration: underline; }
