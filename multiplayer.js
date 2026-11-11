@@ -213,6 +213,7 @@
       setMessage("");
     });
     socket.on("room:declined", () => {
+      clearRoomExpiryCountdown();
       activeRoomCode = null;
       roomRequestPending = false;
       el.room.hidden = true;
