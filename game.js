@@ -948,8 +948,10 @@
         screen.innerHTML = [
           '<span class="title">BUCKSHOT ROULETTE</span>', "",
           `CURRENT BALANCE: ${this.balance.toLocaleString()}`, "",
+          '<div class="menu-options">',
           '<button class="menu-choice" type="button" data-main-mode="1">&gt; [ 1 ] : STORY MODE</button>',
           '<button class="menu-choice" type="button" data-main-mode="2">&gt; [ 2 ] : MULTIPLAYER</button>',
+          '</div>',
           "",
           "Select mode:"
         ].join("\n");
