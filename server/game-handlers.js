@@ -24,7 +24,7 @@ function attachGameHandlers(io, roomManager) {
           started = true;
         });
         if (!started) {
-          socket.emit("room:error", { message: "Only the host can start a ready lobby." });
+          socket.emit("room:error", { message: "This room is no longer ready. Your opponent may have disconnected or the room may have expired. Ask them to rejoin, or create a new room." });
           return;
         }
         const room = await roomManager.get(code);
