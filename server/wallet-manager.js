@@ -215,7 +215,7 @@ class RedisWalletManager {
     if (!raw) throw new Error("Wager not found.");
     const wager = JSON.parse(raw);
     const result = await this.redis.eval(REFUND_WAGER, 4,
-      this.accountKey(wager.hostToken), this.accountKey(wager.guestToken), this.wagerKey(wagerId), this.ledgerKey(), Date.now());
+      this.accountKey(wager.hostPlayerId), this.accountKey(wager.guestPlayerId), this.wagerKey(wagerId), this.ledgerKey(), Date.now());
     if (result[0] !== "ok") throw new Error(result[1]);
     return JSON.parse(result[1]);
   }
