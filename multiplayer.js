@@ -296,6 +296,45 @@
   });
   el.shootOpponent.addEventListener("click", () => sendAction({ type: "shoot", target: "opponent" }));
   el.shootSelf.addEventListener("click", () => sendAction({ type: "shoot", target: "self" }));
+  // Number shortcuts mirror the bracketed actions shown in the matchmaking UI.
+  // Ignore keystrokes while the user is typing, and only handle shortcuts in Multiplayer.
+  document.addEventListener("keydown", (event) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+    if (panel.hidden || storyMode.hidden === false) return;
+    if (el.game.hidden === false) return;
+
+    const target = event.target;
+    const isTyping = target instanceof HTMLElement && (
+      target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)
+    );
+    if (isTyping) return;
+
+    const key = event.key;
+    let action = null;
+
+    if (el.room.hidden) {
+      if (el.joinForm.hidden) {
+        if (key === "1") action = el.create;
+        if (key === "2") action = el.joinOpen;
+      }
+    } else if (!el.request.hidden) {
+      if (key === "1") action = el.accept;
+      if (key === "2") action = el.decline;
+      if (key === "3") action = el.leave;
+    } else if (!el.players.hidden) {
+      if (isHost && key === "1") action = el.start;
+      else if (isHost && key === "2") action = el.leave;
+      else if (!isHost && key === "1") action = el.leave;
+    } else if (key === "1") {
+      action = el.leave;
+    }
+
+    if (action && !action.hidden && !action.disabled) {
+      event.preventDefault();
+      action.click();
+    }
+  });
+
   el.leave.addEventListener("click", () => {
     if (socket) socket.disconnect();
     socket = null;
