@@ -118,10 +118,34 @@
     socket = window.io({ path: "/api/socket", addTrailingSlash: false, transports: ["websocket"] });
     socket.on("connect", () => {
       el.reconnect.hidden = true;
+      identityReady = false;
+      socket.emit("identity:register", { username: getUsername(), token: getWalletToken() });
       if (wasDisconnected) {
         wasDisconnected = false;
-        setMessage("Reconnected. Your previous room could not be restored; create a new room or join again.");
-      } else setMessage("Connected to multiplayer server.");
+        setMessage("Reconnected. Your wallet is being restored; create a new room or join again.");
+      } else setMessage("Connected. Loading your multiplayer wallet...");
+    });
+    socket.on("identity:ready", (data) => {
+      identityReady = true;
+      try { localStorage.setItem(walletTokenKey, data.token); } catch {}
+      setWalletState({ balance: data.balance, locked: data.locked, username: data.username });
+      while (pendingIdentityEmits.length) {
+        const pending = pendingIdentityEmits.shift();
+        socket.emit(pending.eventName, pending.payload);
+      }
+      setMessage("Multiplayer wallet ready.");
+    });
+    socket.on("identity:error", (data) => {
+      identityReady = false;
+      setMessage(data?.message || "Could not load your multiplayer wallet.");
+    });
+    socket.on("wallet:state", setWalletState);
+    socket.on("wager:state", (wager) => {
+      currentWager = wager;
+      renderWager();
+    });
+    socket.on("wager:error", (data) => {
+      setMessage(data?.message || "Could not process that wager.");
     });
     socket.on("disconnect", () => {
       if (intentionalDisconnect) return;
