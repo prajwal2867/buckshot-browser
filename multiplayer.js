@@ -119,6 +119,7 @@
       el.room.hidden = false;
       el.lobby.hidden = true;
       el.status.textContent = "Room ready. Share the code and wait for your opponent.";
+      el.expiry.textContent = "Rooms close after 5 minutes without activity. Start the match soon.";
       el.codeCard.hidden = false;
       el.codeDisplay.textContent = data.code.split("").join(" ");
       el.request.hidden = true;
@@ -136,6 +137,7 @@
       el.room.hidden = false;
       el.lobby.hidden = true;
       el.status.textContent = "Request sent. Waiting for the host to approve you.";
+      el.expiry.textContent = "If the host does not respond, you can leave and try another room.";
       el.codeCard.hidden = true;
       el.leave.textContent = "> LEAVE ROOM [ 1 ]";
       setMessage("Request sent to " + data.hostUsername + ".");
@@ -271,8 +273,12 @@
       return;
     }
     actionPending = true;
-    el.status.textContent = "Submitting your move…";
-    if (latestGame) renderGame({ ...latestGame, yourTurn: false });
+    el.status.textContent = "Move sent. Waiting for the server to confirm…";
+    el.turn.textContent = "Submitting your move…";
+    el.shootOpponent.disabled = true;
+    el.shootSelf.disabled = true;
+    el.inventory.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+    el.steal.querySelectorAll("button").forEach((button) => { button.disabled = true; });
     socket.emit("game:action", { code: activeRoomCode, action });
   }
 
