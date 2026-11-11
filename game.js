@@ -129,10 +129,6 @@
           this.render();
         } else if (command === "2") {
           window.dispatchEvent(new CustomEvent("buckshot:mode", { detail: "multiplayer" }));
-        } else if (command === "3") {
-          this.tutorialReturnMode = "menu";
-          this.mode = "tutorial";
-          this.render();
         }
         return;
       }
@@ -1009,7 +1005,6 @@
           '<div class="menu-options">',
           '<button class="menu-choice" type="button" data-main-mode="1">&gt; [ 1 ] : STORY MODE</button>',
           '<button class="menu-choice" type="button" data-main-mode="2">&gt; [ 2 ] : MULTIPLAYER</button>',
-          '<button class="menu-choice" type="button" data-main-mode="3">&gt; [ 3 ] : HOW TO PLAY</button>',
           '</div>',
           "",
           "Select mode:"
@@ -1053,9 +1048,8 @@
         screen.innerHTML = [
           '<span class="title">BUCKSHOT ROULETTE</span>', "",
           `CURRENT BALANCE: ${this.balance.toLocaleString()}`,
-          '<span class="bet-note">[ WINNING BET PAYS OUT DOUBLE YOUR STAKE ]</span>'
         ].join("\n");
-        promptLabel.textContent = "> ENTER BET AMOUNT: ";
+        promptLabel.innerHTML = '&gt; ENTER BET AMOUNT:<span class="bet-note">[ WINNING BET PAYS OUT DOUBLE YOUR STAKE ]</span>';
         input.disabled = false;
         if (!input.readOnly) input.focus();
         keypadButtons.forEach((b) => b.disabled = false);
