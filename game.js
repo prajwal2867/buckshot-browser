@@ -103,6 +103,21 @@
         .replaceAll("'", "&#39;");
     }
 
+    returnToMenu() {
+      if (this.timer) window.clearTimeout(this.timer);
+      if (this.stealTimer) window.clearTimeout(this.stealTimer);
+      if (this.stealCountdownInterval) window.clearInterval(this.stealCountdownInterval);
+      this.timer = null;
+      this.stealTimer = null;
+      this.stealCountdownInterval = null;
+      this.stealDeadline = 0;
+      this.stealableItems = [];
+      this.stealOwner = null;
+      this.busy = false;
+      this.mode = "menu";
+      this.render();
+    }
+
     submit(raw) {
       const command = String(raw).trim().toLowerCase();
       if (this.mode === "menu") {
@@ -1091,10 +1106,18 @@
     const button = event.target.closest("button");
     if (!button || button.disabled) return;
     const key = button.dataset.key;
-    if (key === "enter") form.requestSubmit();
+    if (key === "escape") game.returnToMenu();
+    else if (key === "enter") form.requestSubmit();
     else if (key === "clear") input.value = "";
     else if (key === "backspace") input.value = input.value.slice(0, -1);
     else input.value += key;
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (document.getElementById("multiplayer-panel")?.hidden === false) return;
+    event.preventDefault();
+    game.returnToMenu();
   });
 
   const media = window.matchMedia("(max-width: 640px), (pointer: coarse)");
