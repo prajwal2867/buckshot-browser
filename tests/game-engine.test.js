@@ -400,6 +400,7 @@ test("Double or Nothing is locked until the player wins Story Mode", () => {
   const game = boot();
   game.submit("1"); // Choose Story Mode from the main menu.
   game.submit("0"); // Select free play at the bet prompt.
+  game.submit("2"); // Verify Double or Nothing remains locked.
   assert.equal(game.mode, "start");
   assert.equal(game.gameMode, "story");
   assert.match(game.events.at(-1), /Win Story Mode once/);
