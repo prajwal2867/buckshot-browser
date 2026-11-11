@@ -61,7 +61,7 @@ async function createAcceptedRoom(harness) {
 
   await host.trigger("room:create");
   await guest.trigger("room:join", { code: "4827" });
-  const request = host.sent.find((entry) => entry.event === "room:join-request").payload;
+  const request = harness.emitted.find((entry) => entry.target === host.id && entry.event === "room:join-request").payload;
   await host.trigger("room:respond", { code: "4827", requestId: request.requestId, accepted: true });
 
   return { host, guest, hostIdentity, guestIdentity };
