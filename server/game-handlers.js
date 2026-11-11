@@ -60,7 +60,7 @@ function attachGameHandlers(io, roomManager, walletManager) {
         }
         let room = await roomManager.get(code);
         if (room?.game?.status === "finished" && room.wager?.status === "locked") {
-          const winner = room.host.playerId === room.game.winnerId ? room.host : room.guest;
+          const winner = room.host.socketId === room.game.winnerId ? room.host : room.guest;
           const settled = await walletManager.settleWager(room.wager.id, winner.playerId);
           await roomManager.update(code, (current) => {
             if (current?.wager?.id === settled.id) {
