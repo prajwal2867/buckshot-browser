@@ -943,12 +943,15 @@
     }
 
     render() {
+      document.body.classList.toggle("main-menu", this.mode === "menu");
       if (this.mode === "menu") {
         screen.innerHTML = [
           '<span class="title">BUCKSHOT ROULETTE</span>', "",
           `CURRENT BALANCE: ${this.balance.toLocaleString()}`, "",
           '<button class="menu-choice" type="button" data-main-mode="1">&gt; [ 1 ] : STORY MODE</button>',
-          '<button class="menu-choice" type="button" data-main-mode="2">&gt; [ 2 ] : MULTIPLAYER</button>'
+          '<button class="menu-choice" type="button" data-main-mode="2">&gt; [ 2 ] : MULTIPLAYER</button>',
+          "",
+          "Select mode:"
         ].join("\n");
         promptLabel.textContent = "Select mode:";
         input.disabled = true;
