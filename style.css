@@ -237,7 +237,7 @@ body.main-menu #keypad { display: none !important; }
 #screen .menu-options { display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
 #screen .menu-choice { display: block; width: fit-content; margin: 0; border: 0; border-radius: 0; padding: 0; background: transparent; color: inherit; text-align: left; line-height: 1.15; }
 #screen .menu-choice:hover { background: #292929; }
-#screen .bet-note { color: #aaa; font-size: .78em; }
+#screen .bet-note, #command-form .bet-note { color: #aaa; font-size: .78em; }
 #screen .separator { color: #777; }
 #screen .bankruptcy-title { color: #ff5c5c; font-weight: 700; letter-spacing: 0.06em; }
 
@@ -289,45 +289,76 @@ body.main-menu #keypad { display: none !important; }
 }
 
 
-/* Center the complete Story Mode experience, including the betting prompt. */
-body.story-active {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  min-height: 100svh;
+/* Story Mode stays flush-left; do not center content in the viewport. */
+body.story-active .site-header {
+  width: 100%;
+  max-width: none;
+  margin: 0 0 18px;
+  justify-content: flex-start;
 }
+body.story-active main,
 body.story-active #story-mode {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  width: min(100%, 960px);
-  margin: 0 auto;
-  text-align: center;
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  text-align: left;
 }
 body.story-active #screen {
   width: 100%;
-  margin: 0 auto;
-  text-align: center;
+  max-width: none;
+  margin: 0;
+  text-align: left;
 }
 body.story-active #command-form {
-  justify-content: center;
+  justify-content: flex-start;
+  align-items: flex-start;
   width: 100%;
-  margin-top: .25rem;
+  margin: .25rem 0 0;
+  text-align: left;
+}
+body.story-active #command-form label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
 }
 body.story-active #command-input {
   flex: 0 1 14ch;
-  max-width: 45%;
+  max-width: 100%;
   text-align: left;
 }
 body.story-active #keypad {
   width: min(100%, 360px);
-  margin: 0 auto;
+  margin: 0;
 }
 body.story-active .event-log {
   width: min(100%, 680px);
   box-sizing: border-box;
-  margin: 8px auto 0;
+  margin: 8px 0 0;
+  text-align: left;
+}
+body.story-active .bet-note {
+  display: block;
+  margin-top: .25rem;
+  text-align: left;
+}
+body.main-menu {
+  display: block;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 12px;
+}
+body.main-menu .site-header {
+  width: 100%;
+  max-width: none;
+  margin: 0 0 18px;
+  justify-content: flex-start;
+}
+body.main-menu #story-mode,
+body.main-menu #screen {
+  width: 100%;
+  max-width: none;
+  margin: 0;
   text-align: left;
 }
