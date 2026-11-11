@@ -39,7 +39,7 @@
     decline: byId("join-decline"), players: byId("room-players"),
     leave: byId("room-leave"), start: byId("game-start"), game: byId("pvp-game"),
     reconnect: byId("multiplayer-reconnect"), expiry: byId("room-expiry"),
-    balance: byId("pvp-balance"), wager: byId("pvp-wager"), turn: byId("pvp-turn"), scoreboard: byId("pvp-scoreboard"),
+    balance: byId("pvp-balance"), wager: byId("pvp-wager"), versus: byId("pvp-versus"), turn: byId("pvp-turn"), scoreboard: byId("pvp-scoreboard"),
     magazine: byId("pvp-magazine"), known: byId("pvp-known-shell"),
     shootOpponent: byId("pvp-shoot-opponent"), shootSelf: byId("pvp-shoot-self"),
     inventory: byId("pvp-inventory"), steal: byId("pvp-steal"), events: byId("pvp-events")
@@ -371,67 +371,99 @@
   function renderGame(state) {
     el.game.hidden = false;
     el.start.hidden = true;
+    el.status.hidden = true;
+    el.wallet.hidden = true;
+    el.players.hidden = true;
     el.balance.textContent = "CURRENT BALANCE: $" + (walletState?.balance ?? "—");
+
     if (currentWager?.status === "settled") {
       el.wager.textContent = "BET SETTLED | POT PAID: $" + currentWager.pot;
     } else if (currentWager?.status === "refunded") {
       el.wager.textContent = "BET REFUNDED";
     } else if (currentWager?.status === "locked") {
-      el.wager.textContent = "ACTIVE BET: $" + currentWager.stake + " | WIN: +$" + currentWager.stake + " | POT: $" + currentWager.pot;
+      el.wager.textContent = "ACTIVE BET: $" + currentWager.stake +
+        " | WIN: $" + currentWager.stake + " | LOCKED: $" + currentWager.stake;
     } else {
       el.wager.textContent = "NO ACTIVE BET";
     }
-    el.status.textContent = state.status === "finished" ? "Match finished." : "Match in progress.";
-    el.turn.textContent = state.status === "finished"
-      ? (state.winner || "A player") + " wins."
-      : state.yourTurn ? "Your turn." : state.turnUsername + "'s turn.";
+
+    el.versus.textContent = "> " + state.players.map((player) => player.username).join(" vs. ");
+    el.magazine.textContent = "MAG COUNT: " + state.magazine.reload +
+      "\nSHELLS: " + state.magazine.remaining + " ( " + state.magazine.live +
+      " LIVE / " + state.magazine.blank + " BLANK )";
+    el.known.hidden = !state.knownCurrentShell;
+    el.known.textContent = state.knownCurrentShell
+      ? "CURRENT SHELL: " + state.knownCurrentShell.toUpperCase()
+      : "";
+
     el.scoreboard.replaceChildren();
     state.players.forEach((player) => {
-      const card = document.createElement("div");
-      card.className = "pvp-player";
-      const name = document.createElement("strong");
-      name.textContent = player.username;
-      const health = document.createElement("span");
-      health.textContent = "Health: " + player.health + " / " + player.maxHealth;
-      const inventory = document.createElement("small");
-      inventory.textContent = "Items: " + (player.inventory.length ? player.inventory.join(", ") : "none");
-      card.append(name, health, inventory);
-      el.scoreboard.append(card);
+      const lives = document.createElement("p");
+      lives.className = "pvp-line";
+      lives.textContent = player.username + " LIVES: " + player.health;
+      const items = document.createElement("p");
+      items.className = "pvp-line";
+      items.textContent = player.username + " ITEMS [" + player.inventory.length + "]: " +
+        (player.inventory.length ? player.inventory.join(", ") : "none");
+      el.scoreboard.append(lives, items);
     });
-    el.magazine.textContent = "Magazine " + state.magazine.reload + " · " +
-      state.magazine.remaining + " shells remaining (" + state.magazine.live + " live / " +
-      state.magazine.blank + " blank)";
-    el.known.textContent = state.knownCurrentShell
-      ? "Your current-shell information: " + state.knownCurrentShell.toUpperCase()
-      : "You do not know the current shell.";
+
     const canAct = state.status === "playing" && state.yourTurn && !actionPending;
+    el.shootOpponent.textContent = "1. Shoot opponent";
+    el.shootSelf.textContent = "2. Shoot yourself";
     el.shootOpponent.disabled = !canAct || state.stealOptions.length > 0;
     el.shootSelf.disabled = !canAct || state.stealOptions.length > 0;
+
     el.inventory.replaceChildren();
     const own = state.players.find((player) => player.isYou);
-    if (own) {
+    if (own?.inventory.length) {
+      const heading = document.createElement("p");
+      heading.className = "pvp-line";
+      heading.textContent = "3. Use an item";
+      el.inventory.append(heading);
       own.inventory.forEach((item, index) => {
-        const button = makeButton("Use " + item, () => sendAction({ type: "item", itemIndex: index }), "secondary-button");
+        const button = makeButton("> " + item, () => sendAction({ type: "item", itemIndex: index }), "secondary-button");
+        button.className += " pvp-item-action";
         button.disabled = !canAct || state.stealOptions.length > 0;
         el.inventory.append(button);
       });
+    } else {
+      const noItems = document.createElement("p");
+      noItems.className = "pvp-line";
+      noItems.textContent = "3. Use an item (none available)";
+      el.inventory.append(noItems);
     }
+
     el.steal.hidden = !state.stealOptions.length;
     el.steal.replaceChildren();
     if (state.stealOptions.length) {
       const heading = document.createElement("p");
+      heading.className = "pvp-line";
       heading.textContent = "Choose an item to steal:";
       el.steal.append(heading);
       state.stealOptions.forEach((item, index) => {
-        el.steal.append(makeButton(item, () => sendAction({ type: "steal", itemIndex: index })));
+        const button = makeButton("> " + item, () => sendAction({ type: "steal", itemIndex: index }));
+        button.disabled = !canAct;
+        el.steal.append(button);
       });
     }
+
+    el.turn.textContent = state.status === "finished"
+      ? "(" + (state.winner || "A player") + " wins.)"
+      : "(" + (state.turnUsername || "Opponent") + "'s turn)";
+    el.leave.textContent = "4. Leave the room";
+    el.leave.classList.add("pvp-terminal-action");
+
     el.events.replaceChildren();
-    state.events.slice(-12).forEach((message) => {
+    state.events.slice(-8).forEach((message) => {
       const line = document.createElement("p");
-      line.textContent = "› " + message;
+      line.textContent = "> " + message;
       el.events.append(line);
     });
+    el.shootOpponent.disabled = !canAct || state.stealOptions.length > 0;
+    el.shootSelf.disabled = !canAct || state.stealOptions.length > 0;
+    el.actionPrompt = byId("pvp-action-prompt");
+    el.actionPrompt.textContent = state.status === "finished" ? "MATCH COMPLETE." : "SELECT AN ACTION:";
   }
 
   el.wagerForm.addEventListener("submit", (event) => {
