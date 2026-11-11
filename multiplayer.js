@@ -479,6 +479,21 @@
   // Ignore keystrokes while the user is typing, and only handle shortcuts in Multiplayer.
   document.addEventListener("keydown", (event) => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+    if (event.key === "Escape" && !panel.hidden) {
+      event.preventDefault();
+      if (!el.joinForm.hidden) {
+        el.joinForm.hidden = true;
+        el.joinOpen.hidden = false;
+        el.joinOpen.focus();
+        return;
+      }
+      showMode("story");
+      if (window.buckshotGame) {
+        window.buckshotGame.mode = "menu";
+        window.buckshotGame.render();
+      }
+      return;
+    }
     if (panel.hidden || storyMode.hidden === false) return;
     if (el.game.hidden === false) return;
 
