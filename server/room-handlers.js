@@ -230,6 +230,9 @@ function attachRoomHandlers(io, roomManager, walletManager) {
         if (room?.wager?.status === "locked") {
           if (room.status === "lobby") {
             const refunded = await walletManager.refundWager(room.wager.id);
+            await roomManager.update(room.code, (current) => {
+              if (current?.wager?.id === refunded.id) current.wager.status = "refunded";
+            });
             io.to(room.code).emit("wager:state", publicWager(refunded));
             await Promise.all([emitWallet(io, walletManager, room.host), emitWallet(io, walletManager, room.guest)]);
           } else if (room.status === "playing" && room.game?.status === "playing") {
@@ -243,6 +246,12 @@ function attachRoomHandlers(io, roomManager, walletManager) {
               }
             });
             const settled = await walletManager.settleWager(room.wager.id, winner.playerId);
+            await roomManager.update(room.code, (current) => {
+              if (current?.wager?.id === settled.id) {
+                current.wager.status = "settled";
+                current.wager.winnerPlayerId = winner.playerId;
+              }
+            });
             const finished = await roomManager.get(room.code);
             if (finished?.game) io.to(winner.socketId).emit("game:state", getPlayerView(finished.game, winner.socketId));
             io.to(winner.socketId).emit("wager:state", publicWager(settled));
