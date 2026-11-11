@@ -97,7 +97,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .multiplayer-panel .identity-line strong { color: #fff; }
 .multiplayer-panel .status-line { margin: 0 0 .75rem; padding: 0; background: transparent; border: 0; font-size: inherit; }
 .multiplayer-panel .room-code-line { margin: .75rem 0; }
-.multiplayer-panel .room-code { display: inline-block; font-size: 1rem; letter-spacing: .25em; }
+.multiplayer-panel .room-code { display: inline-block; font-size: 1rem; letter-spacing: 0; }
 .multiplayer-panel .join-request { margin: .75rem 0; padding: 0; border: 0; }
 .multiplayer-panel .join-request p { margin: 0 0 .4rem; }
 .multiplayer-panel .room-players { margin: .75rem 0; font-size: inherit; color: #fff; }
