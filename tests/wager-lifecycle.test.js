@@ -122,3 +122,21 @@ test("disconnect before the match refunds both locked stakes", async () => {
   assert.equal((await harness.walletManager.getAccount(hostIdentity.token)).locked, 0);
   assert.equal((await harness.walletManager.getAccount(guestIdentity.token)).locked, 0);
 });
+
+test("disconnect during a locked match forfeits the pot to the connected opponent", async () => {
+  const harness = createHarness();
+  const { host, guest, hostIdentity, guestIdentity } = await createAcceptedRoom(harness);
+
+  await host.trigger("wager:propose", { code: "4827", stake: 125 });
+  await guest.trigger("wager:respond", { code: "4827", accepted: true });
+  await host.trigger("game:start", { code: "4827" });
+  await guest.disconnect();
+
+  assert.equal((await harness.walletManager.getAccount(hostIdentity.token)).balance, 1125);
+  assert.equal((await harness.walletManager.getAccount(guestIdentity.token)).balance, 875);
+  assert.equal((await harness.walletManager.getAccount(hostIdentity.token)).locked, 0);
+  assert.equal((await harness.walletManager.getAccount(guestIdentity.token)).locked, 0);
+  assert.ok(harness.emitted.some((entry) =>
+    entry.target === host.id && entry.event === "game:state" && entry.payload.status === "finished"
+  ));
+});
