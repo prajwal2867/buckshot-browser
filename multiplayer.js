@@ -19,7 +19,6 @@
   let roomExpiryTimer = null;
 
   const el = {
-    open: byId("multiplayer-open"), storyOpen: byId("story-open"),
     identity: byId("multiplayer-identity"), username: byId("multiplayer-username"),
     saveUsername: byId("username-save"), changeUsername: byId("username-change"),
     lobby: byId("multiplayer-lobby"), playerName: byId("multiplayer-player-name"),
@@ -370,10 +369,6 @@
     document.body.classList.toggle("story-active", !multiplayer);
     panel.hidden = !multiplayer;
     storyMode.hidden = multiplayer;
-    el.open.classList.toggle("active", multiplayer);
-    el.storyOpen.classList.toggle("active", !multiplayer);
-    el.open.setAttribute("aria-pressed", String(multiplayer));
-    el.storyOpen.setAttribute("aria-pressed", String(!multiplayer));
     if (multiplayer) {
       if (activeRoomCode) {
         el.identity.hidden = true;
@@ -395,7 +390,7 @@
   el.copyInvite.addEventListener("click", () => {
     if (!activeRoomCode) return;
     const invite = "Join my Buckshot Roulette match. Open " + window.location.href.split("?")[0] +
-      ", choose Multiplayer, and enter room code " + activeRoomCode + ".";
+      ", enter room code " + activeRoomCode + ".";
     copyText(invite, "Invite message copied. Send it to your opponent.");
   });
   el.reconnect.addEventListener("click", () => {
@@ -407,8 +402,6 @@
     window.setTimeout(() => { el.reconnect.disabled = false; }, 1500);
   });
 
-  el.open.addEventListener("click", () => showMode("multiplayer"));
-  el.storyOpen.addEventListener("click", () => showMode("story"));
   el.saveUsername.addEventListener("click", () => {
     const username = el.username.value.trim();
     if (!usernamePattern.test(username)) {
