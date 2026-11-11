@@ -206,21 +206,43 @@ function attachRoomHandlers(io, roomManager, walletManager) {
           }
         });
         if (!updated || updated.wager?.status !== "locked") {
-          await walletManager.refundWager(locked.id);
+          const refunded = await walletManager.refundWager(locked.id);
+          const restored = await roomManager.update(code, (current) => {
+            if (current?.wager?.id === refunded.id) {
+              current.wager.status = "refunded";
+              current.wager.guestAccepted = false;
+            }
+          });
+          if (restored) {
+            io.to(code).emit("wager:state", publicWager(restored.wager));
+            await Promise.all([emitWallet(io, walletManager, restored.host), emitWallet(io, walletManager, restored.guest)]);
+          }
           return socket.emit("wager:error", { message: "The room changed before the wager could be confirmed. Both stakes were refunded." });
         }
         io.to(code).emit("wager:state", publicWager(updated.wager));
         await Promise.all([emitWallet(io, walletManager, updated.host), emitWallet(io, walletManager, updated.guest)]);
       } catch (error) {
+        let refunded = false;
+        if (wagerToLock?.id) {
+          try {
+            const result = await walletManager.refundWager(wagerToLock.id);
+            refunded = result.status === "refunded";
+          } catch {
+            // No escrow was created, or Redis is unavailable. Keep the match blocked.
+          }
+        }
         await roomManager.update(code, (current) => {
           if (current?.wager?.id === wagerToLock?.id) {
-            current.wager.status = "rejected";
+            current.wager.status = refunded ? "refunded" : "rejected";
             current.wager.guestAccepted = false;
           }
         }).catch(() => {});
         socket.emit("wager:error", { message: error.message || "Could not lock both stakes." });
         const latest = await roomManager.get(code).catch(() => null);
-        if (latest) io.to(code).emit("wager:state", publicWager(latest.wager));
+        if (latest) {
+          io.to(code).emit("wager:state", publicWager(latest.wager));
+          if (refunded) await Promise.all([emitWallet(io, walletManager, latest.host), emitWallet(io, walletManager, latest.guest)]);
+        }
       }
     });
 
