@@ -362,3 +362,48 @@ body.main-menu #screen {
   margin: 0;
   text-align: left;
 }
+
+
+/* Keep the terminal column centered while preserving left-aligned text. */
+body.story-active main,
+body.story-active #story-mode {
+  box-sizing: border-box;
+  width: min(100%, 760px);
+  max-width: 760px;
+  margin: 0 auto;
+  text-align: left;
+}
+body.story-active #screen,
+body.story-active #command-form,
+body.story-active .event-log {
+  text-align: left;
+}
+body.main-menu {
+  display: block;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 24px;
+}
+body.main-menu main,
+body.main-menu #story-mode {
+  box-sizing: border-box;
+  width: min(100%, 760px);
+  max-width: 760px;
+  margin: 0 auto;
+  text-align: left;
+}
+body.main-menu #screen {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  text-align: left;
+}
+body.main-menu #command-form {
+  display: flex !important;
+  width: 100%;
+  margin-top: .4rem;
+}
+body.main-menu #command-input {
+  flex: 0 1 18ch;
+}
+.site-header nav.mode-switch { display: none !important; }
