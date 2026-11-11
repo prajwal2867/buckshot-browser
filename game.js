@@ -165,7 +165,7 @@
         this.betSettled = false;
         this.balance -= amount;
         this.saveBalance();
-        this.mode = "start";
+        this.start("story");
         this.addEvent(amount ? "Bet placed: $" + amount.toLocaleString() + "." : "Free play selected. No bet placed.");
         this.render();
         return;
@@ -180,20 +180,6 @@
           this.addEvent("Choose 1 to file bankruptcy or 2 to decline for now.");
         }
         this.render();
-        return;
-      }
-      if (this.mode === "start") {
-        if (command === "2" && !this.doubleUnlocked) {
-          this.addEvent("Double or Nothing is locked. Win Story Mode once to unlock it.");
-          this.render();
-          return;
-        }
-        if (command === "2") this.start("double");
-        else if (command === "1" || command === "") this.start("story");
-        else {
-          this.addEvent("Choose 1 for Story Mode or 2 for Double or Nothing.");
-          this.render();
-        }
         return;
       }
       if (this.mode === "restart") {
@@ -606,7 +592,6 @@
         } else if (playerWon) {
           this.gameOver = true;
           this.mode = "restart";
-          this.unlockDoubleOrNothing();
           this.addEvent("You survived Story Mode. The briefcase is yours.");
           this.settleBet(true);
           this.addEvent(`Final Story Mode cash: ${this.storyCash().toLocaleString()}.`);
@@ -1016,6 +1001,7 @@
 
     render() {
       document.body?.classList?.toggle("main-menu", this.mode === "menu");
+      document.body?.classList?.add("story-active");
       if (this.mode === "menu") {
         screen.innerHTML = [
           '<span class="title">BUCKSHOT ROULETTE</span>', "",
@@ -1093,26 +1079,6 @@
           '<span class="separator">---</span>'
         ].join("\n");
         promptLabel.textContent = available ? "1 to claim / 2 to decline:" : "2 to continue:";
-        input.disabled = false;
-        if (!input.readOnly) input.focus();
-        keypadButtons.forEach((b) => b.disabled = false);
-        return;
-      }
-
-      if (this.mode === "start") {
-        screen.innerHTML = [
-          '<span class="title">BUCKSHOT ROULETTE</span>', "",
-          `CURRENT BALANCE: ${this.balance.toLocaleString()}`,
-          `YOUR BET: ${this.betAmount ? "$" + this.betAmount.toLocaleString() + " | WIN: +$" + this.betAmount.toLocaleString() + " | PAYOUT: $" + (this.betAmount * 2).toLocaleString() : "NONE"}`, "",
-          "1. Story Mode",
-          this.doubleUnlocked ? "2. Double or Nothing" : "2. Double or Nothing (locked)",
-          "",
-          this.doubleUnlocked
-            ? "Press Enter for Story Mode, or enter 2 for Double or Nothing."
-            : "Win Story Mode once to unlock Double or Nothing.",
-          "", '<span class="separator">---</span>'
-        ].join("\n");
-        promptLabel.textContent = "Mode:";
         input.disabled = false;
         if (!input.readOnly) input.focus();
         keypadButtons.forEach((b) => b.disabled = false);
