@@ -92,6 +92,7 @@ function attachRoomHandlers(io, roomManager) {
           });
         } else {
           io.to(result.guestSocketId).emit("room:declined", { code: String(payload.code || "") });
+          socket.emit("room:request-declined", { code: String(payload.code || "") });
         }
       } catch (error) {
         socket.emit("room:error", { message: "Could not process that join request." });
