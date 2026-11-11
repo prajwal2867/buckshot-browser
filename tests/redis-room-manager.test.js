@@ -48,7 +48,11 @@ integrationTest("Redis room manager handles join approval and cross-client membe
     assert.equal((await manager.get("7391")).status, "lobby");
     assert.equal((await manager.getRoomForSocket("guest-2")).guest.username, "GuestPlayer");
 
-    await manager.disconnect("guest-2", 103);
+    await redis.del(manager.socketKey("guest-2"));
+    await manager.update("7391", (current) => { current.updatedAt = 103; });
+    assert.equal((await manager.getRoomForSocket("guest-2")).guest.username, "GuestPlayer");
+
+    await manager.disconnect("guest-2", 104);
     assert.equal(await manager.getRoomForSocket("guest-2"), null);
     const room = await manager.get("7391");
     assert.equal(room.status, "waiting");
