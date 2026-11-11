@@ -30,7 +30,6 @@
     requestName: byId("join-request-name"), accept: byId("join-accept"),
     decline: byId("join-decline"), players: byId("room-players"),
     leave: byId("room-leave"), start: byId("game-start"), game: byId("pvp-game"),
-    copyCode: byId("room-copy-code"), copyInvite: byId("room-copy-invite"),
     reconnect: byId("multiplayer-reconnect"), expiry: byId("room-expiry"),
     turn: byId("pvp-turn"), scoreboard: byId("pvp-scoreboard"),
     magazine: byId("pvp-magazine"), known: byId("pvp-known-shell"),
@@ -180,7 +179,7 @@
       el.status.textContent = "Room ready. Share the code and wait for your opponent.";
       el.expiry.textContent = "Rooms close after 5 minutes without activity. Start the match soon.";
       el.codeCard.hidden = false;
-      el.codeDisplay.textContent = data.code.split("").join(" ");
+      el.codeDisplay.textContent = data.code;
       startRoomExpiryCountdown();
       el.request.hidden = true;
       el.players.hidden = true;
@@ -248,7 +247,7 @@
       el.room.hidden = false;
       el.lobby.hidden = true;
       el.codeCard.hidden = false;
-      el.codeDisplay.textContent = data.code.split("").join(" ");
+      el.codeDisplay.textContent = data.code;
       el.request.hidden = true;
       el.players.hidden = false;
       el.players.textContent = "> " + data.host.username + " vs " + data.guest.username;
@@ -354,16 +353,6 @@
     socket.emit("game:action", { code: activeRoomCode, action });
   }
 
-  async function copyText(value, successMessage) {
-    try {
-      if (!navigator.clipboard?.writeText) throw new Error("Clipboard access unavailable");
-      await navigator.clipboard.writeText(value);
-      setMessage(successMessage);
-    } catch {
-      setMessage("Clipboard access was blocked. Select the room code and copy it manually.");
-    }
-  }
-
   function showMode(mode) {
     const multiplayer = mode === "multiplayer";
     document.body.classList.toggle("story-active", !multiplayer);
@@ -384,15 +373,6 @@
     if (event.detail === "multiplayer") showMode("multiplayer");
   });
 
-  el.copyCode.addEventListener("click", () => {
-    if (activeRoomCode) copyText(activeRoomCode, "Room code copied. Send it to your opponent.");
-  });
-  el.copyInvite.addEventListener("click", () => {
-    if (!activeRoomCode) return;
-    const invite = "Join my Buckshot Roulette match. Open " + window.location.href.split("?")[0] +
-      ", enter room code " + activeRoomCode + ".";
-    copyText(invite, "Invite message copied. Send it to your opponent.");
-  });
   el.reconnect.addEventListener("click", () => {
     const connection = ensureSocket();
     if (!connection) return;
