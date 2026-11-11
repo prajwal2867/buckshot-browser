@@ -205,12 +205,20 @@
       setMessage("Request sent to " + data.hostUsername + ".");
     });
     socket.on("room:join-request", (data) => {
+      startRoomExpiryCountdown();
       pendingRequest = data;
       el.request.hidden = false;
       el.requestName.textContent = data.username;
       el.codeCard.hidden = false;
       el.leave.textContent = "> LEAVE ROOM [ 3 ]";
       setMessage("");
+    });
+    socket.on("room:request-declined", (data) => {
+      if (activeRoomCode !== data.code) return;
+      pendingRequest = null;
+      el.request.hidden = true;
+      startRoomExpiryCountdown();
+      setMessage("Join request declined. Your room is still available to share.");
     });
     socket.on("room:declined", () => {
       clearRoomExpiryCountdown();
