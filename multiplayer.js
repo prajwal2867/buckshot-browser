@@ -222,6 +222,7 @@
 
   function showMode(mode) {
     const multiplayer = mode === "multiplayer";
+    document.querySelector(".site-header").classList.toggle("multiplayer-active", multiplayer);
     panel.hidden = !multiplayer;
     storyMode.hidden = multiplayer;
     el.open.classList.toggle("active", multiplayer);
@@ -238,6 +239,10 @@
       }
     }
   }
+
+  window.addEventListener("buckshot:mode", (event) => {
+    if (event.detail === "multiplayer") showMode("multiplayer");
+  });
 
   el.open.addEventListener("click", () => showMode("multiplayer"));
   el.storyOpen.addEventListener("click", () => showMode("story"));
