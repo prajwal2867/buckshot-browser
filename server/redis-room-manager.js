@@ -80,7 +80,15 @@ const DISCONNECT = `
 const COMPARE_AND_SET = `
   local current = redis.call("GET", KEYS[1])
   if not current or current ~= ARGV[1] then return 0 end
+  local room = cjson.decode(ARGV[2])
   redis.call("SET", KEYS[1], ARGV[2], "EX", ARGV[3])
+  redis.call("SET", ARGV[4] .. room.host.socketId, "host:" .. room.code, "EX", ARGV[3])
+  if room.guest ~= nil and room.guest ~= cjson.null then
+    redis.call("SET", ARGV[4] .. room.guest.socketId, "guest:" .. room.code, "EX", ARGV[3])
+  end
+  if room.pending ~= nil and room.pending ~= cjson.null then
+    redis.call("SET", ARGV[4] .. room.pending.socketId, "pending:" .. room.code, "EX", ARGV[3])
+  end
   return 1
 `;
 
@@ -148,7 +156,7 @@ class RedisRoomManager {
       updater(room);
       room.updatedAt = Date.now();
       const next = JSON.stringify(room);
-      const saved = await this.redis.eval(COMPARE_AND_SET, 1, key, raw, next, this.ttlSeconds);
+      const saved = await this.redis.eval(COMPARE_AND_SET, 1, key, raw, next, this.ttlSeconds, this.keyPrefix + "socket:");
       if (saved === 1) return room;
     }
     throw new Error("The room is busy. Please retry your action.");
