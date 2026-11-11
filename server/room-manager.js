@@ -30,7 +30,7 @@ class RoomManager {
     const room = {
       code, status: "waiting",
       host: { socketId: host.socketId, playerId: host.playerId, username: host.username },
-      guest: null, pending: null, game: null, wager: null, wager: null,
+      guest: null, pending: null, game: null, wager: null,
       createdAt: now, updatedAt: now
     };
     this.rooms.set(code, room);
@@ -48,7 +48,7 @@ class RoomManager {
     if (room.pending) return { ok: false, error: "This room already has a pending request." };
 
     const requestId = crypto.randomUUID();
-    room.pending = { requestId, socketId, playerId: arguments[0].playerId, username };
+    room.pending = { requestId, socketId, playerId, username };
     this.socketRooms.set(socketId, { code: room.code, role: "pending" });
     room.updatedAt = now;
     return { ok: true, requestId, hostSocketId: room.host.socketId, code: room.code, hostUsername: room.host.username };
