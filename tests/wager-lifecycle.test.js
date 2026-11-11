@@ -190,3 +190,63 @@ redisTest("Redis-backed Socket.IO wager lifecycle escrows, starts, and settles t
     await redis.quit();
   }
 });
+
+redisTest("Redis-backed disconnect handling refunds an accepted pre-match wager", async () => {
+  const redis = new Redis(redisUrl);
+  const suffix = require("node:crypto").randomUUID();
+  const roomPrefix = "test-wager-room:" + suffix + ":";
+  const walletPrefix = "test-wager-wallet:" + suffix + ":";
+  const harness = createHarness({
+    roomManager: new RedisRoomManager(redis, { keyPrefix: roomPrefix, randomCode: () => "4827" }),
+    walletManager: new RedisWalletManager(redis, { keyPrefix: walletPrefix })
+  });
+  try {
+    const { host, guest, hostIdentity, guestIdentity } = await createAcceptedRoom(harness);
+    await host.trigger("wager:propose", { code: "4827", stake: 100 });
+    await guest.trigger("wager:respond", { code: "4827", accepted: true });
+    await host.disconnect();
+
+    assert.equal((await harness.walletManager.getAccount(hostIdentity.token)).balance, 1000);
+    assert.equal((await harness.walletManager.getAccount(guestIdentity.token)).balance, 1000);
+    assert.equal((await harness.walletManager.getAccount(hostIdentity.token)).locked, 0);
+    assert.equal((await harness.walletManager.getAccount(guestIdentity.token)).locked, 0);
+  } finally {
+    const keys = await redis.keys(roomPrefix + "*");
+    const walletKeys = await redis.keys(walletPrefix + "*");
+    if (keys.length) await redis.del(...keys);
+    if (walletKeys.length) await redis.del(...walletKeys);
+    await redis.quit();
+  }
+});
+
+redisTest("Redis-backed disconnect handling awards the locked pot to the surviving player", async () => {
+  const redis = new Redis(redisUrl);
+  const suffix = require("node:crypto").randomUUID();
+  const roomPrefix = "test-wager-room:" + suffix + ":";
+  const walletPrefix = "test-wager-wallet:" + suffix + ":";
+  const harness = createHarness({
+    roomManager: new RedisRoomManager(redis, { keyPrefix: roomPrefix, randomCode: () => "4827" }),
+    walletManager: new RedisWalletManager(redis, { keyPrefix: walletPrefix })
+  });
+  try {
+    const { host, guest, hostIdentity, guestIdentity } = await createAcceptedRoom(harness);
+    await host.trigger("wager:propose", { code: "4827", stake: 100 });
+    await guest.trigger("wager:respond", { code: "4827", accepted: true });
+    await host.trigger("game:start", { code: "4827" });
+    await guest.disconnect();
+
+    assert.equal((await harness.walletManager.getAccount(hostIdentity.token)).balance, 1100);
+    assert.equal((await harness.walletManager.getAccount(guestIdentity.token)).balance, 900);
+    assert.equal((await harness.walletManager.getAccount(hostIdentity.token)).locked, 0);
+    assert.equal((await harness.walletManager.getAccount(guestIdentity.token)).locked, 0);
+    assert.ok(harness.emitted.some((entry) =>
+      entry.target === host.id && entry.event === "game:state" && entry.payload.status === "finished"
+    ));
+  } finally {
+    const keys = await redis.keys(roomPrefix + "*");
+    const walletKeys = await redis.keys(walletPrefix + "*");
+    if (keys.length) await redis.del(...keys);
+    if (walletKeys.length) await redis.del(...walletKeys);
+    await redis.quit();
+  }
+});
