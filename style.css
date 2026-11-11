@@ -199,7 +199,10 @@ body.main-menu #keypad { display: none !important; }
     min-height: 100vh;
     padding: 8px;
   }
-  .mode-switch { gap: 5px; }
+  .site-header { flex-wrap: wrap; }
+  .mode-switch { gap: 5px; flex-wrap: wrap; }
+  .mode-button { min-height: 44px; }
+  :root { font-size: clamp(14px, 3vw, 16px); }
   .mode-button { padding: 6px 8px; }
   .multiplayer-actions { grid-template-columns: 1fr; }
   .multiplayer-panel button { min-height: 44px; padding: 8px 10px; touch-action: manipulation; }
@@ -216,7 +219,7 @@ body.main-menu #keypad { display: none !important; }
   }
   #keypad button {
     min-width: 0;
-    min-height: 42px;
+    min-height: 44px;
     border: 1px solid #555;
     border-radius: 4px;
     background: #222;
@@ -281,4 +284,6 @@ body.main-menu #keypad { display: none !important; }
 .pvp-game button:disabled { opacity: .4; cursor: not-allowed; }
 @media (max-width: 520px) {
   .pvp-scoreboard { grid-template-columns: 1fr; }
+  .pvp-controls button, .pvp-inventory button, .pvp-steal button { min-height: 44px; }
+  #screen { overflow-wrap: anywhere; }
 }
