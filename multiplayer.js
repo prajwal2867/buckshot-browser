@@ -367,6 +367,7 @@
 
   function showMode(mode) {
     const multiplayer = mode === "multiplayer";
+    document.body.classList.toggle("story-active", !multiplayer);
     panel.hidden = !multiplayer;
     storyMode.hidden = multiplayer;
     el.open.classList.toggle("active", multiplayer);
