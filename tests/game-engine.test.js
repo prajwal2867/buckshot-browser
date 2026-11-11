@@ -34,6 +34,11 @@ function boot(randomValues = []) {
       scheduledTimers.push({ callback, delay });
       return scheduledTimers.length;
     },
+    setInterval: (callback, delay) => {
+      scheduledTimers.push({ callback, delay, interval: true });
+      return scheduledTimers.length;
+    },
+    clearInterval() {},
     clearTimeout() {},
     location: { reload() {} }
   };
@@ -54,23 +59,7 @@ test("Story stage 1 loads its fixed 3-shell and 5-shell magazines", () => {
   assert.equal(game.blankRemaining, 2);
 });
 
-test("Double or Nothing gives both sides the same health", () => {
-  const game = boot([0.01, 0.99, 0.5, 0.5, 0.5, 0.5, 0.5]);
-  game.start("double");
-  assert.equal(game.player.health, game.dealer.health);
-  assert.ok(game.player.health >= 2 && game.player.health <= 4);
-});
 
-test("random magazine loads always contain both shell types and differ by at most one", () => {
-  for (const value of [0.01, 0.2, 0.49, 0.5, 0.8, 0.99]) {
-    const game = boot(Array(80).fill(value));
-    game.start("double");
-    const total = game.chamber.length;
-    assert.ok(total >= 2 && total <= 8);
-    assert.ok(game.liveRemaining >= 1 && game.blankRemaining >= 1);
-    assert.ok(Math.abs(game.liveRemaining - game.blankRemaining) <= 1);
-  }
-});
 
 test("inventory carries over between reloads and never exceeds eight slots", () => {
   const game = boot();
@@ -98,7 +87,7 @@ test("Beer ejecting a shell cancels a prepared Hand Saw", () => {
 
 test("Burner Phone knowledge shifts forward as shells are consumed", () => {
   const game = boot();
-  game.start("double");
+  game.start("story");
   game.chamber = ["live", "blank", "live"];
   game.liveRemaining = 2;
   game.blankRemaining = 1;
@@ -122,31 +111,10 @@ test("Story stage 3 cuts the wire at zero normal charges and the next hit is fat
   assert.equal(game.player.dead, true);
 });
 
-test("Double or Nothing payout formula is deterministic and later sets double the bank", () => {
-  const game = boot();
-  assert.equal(game.calculateTimedPayout(60), 66000);
-  assert.equal(game.calculateTimedPayout(0), 70000);
-  assert.equal(game.calculateTimedPayout(9999), 10);
-
-  game.start("double");
-  game.stage = 3;
-  game.setNumber = 1;
-  game.setStartedAt = Date.now();
-  game.dealer.dead = true;
-  game.checkStageEnd();
-  const firstSet = game.winnings;
-  assert.ok(firstSet >= 69999 && firstSet <= 70000);
-
-  game.setNumber = 2;
-  game.dealer.dead = true;
-  game.player.dead = false;
-  game.checkStageEnd();
-  assert.equal(game.winnings, firstSet * 2);
-});
 
 test("Dealer saves Adrenaline rather than stealing Beer when it would hand over initiative", () => {
   const game = boot();
-  game.start("double");
+  game.start("story");
   game.current = game.dealer;
   game.opponent = game.player;
   game.dealer.inventory = ["Adrenaline"];
@@ -161,15 +129,6 @@ test("Dealer saves Adrenaline rather than stealing Beer when it would hand over 
   assert.equal(game.chamber.length, 1);
 });
 
-test("zero health ends a Double or Nothing run even in stages 1 and 2", () => {
-  const game = boot();
-  game.start("double");
-  game.stage = 1;
-  game.player.health = 0;
-  assert.equal(game.checkStageEnd(), true);
-  assert.equal(game.gameOver, true);
-  assert.equal(game.winnings, 0);
-});
 
 test("zero player health ends Story Mode immediately in every stage", () => {
   for (const stage of [1, 2, 3]) {
@@ -219,7 +178,7 @@ test("reload clears unused handcuffs and gives the player the first turn", () =>
 
 test("Inverter preserves the user's knowledge of the shell it flips", () => {
   const game = boot();
-  game.start("double");
+  game.start("story");
   game.chamber = ["blank", "live", "blank"];
   game.liveRemaining = 1;
   game.blankRemaining = 2;
@@ -233,7 +192,7 @@ test("Inverter preserves the user's knowledge of the shell it flips", () => {
 
 test("a blank self-shot keeps the turn, while shooting the Dealer ends it", () => {
   const game = boot();
-  game.start("double");
+  game.start("story");
   game.chamber = ["blank", "blank", "live"];
   game.liveRemaining = 1;
   game.blankRemaining = 2;
@@ -245,7 +204,7 @@ test("a blank self-shot keeps the turn, while shooting the Dealer ends it", () =
 
 test("handcuffs skip the opponent's next turn exactly once", () => {
   const game = boot();
-  game.start("double");
+  game.start("story");
   game.dealer.handcuffed = true;
   game.chamber = ["live", "blank"];
   game.liveRemaining = 1;
@@ -257,7 +216,7 @@ test("handcuffs skip the opponent's next turn exactly once", () => {
 
 test("Beer ejecting the final shell reloads and resets temporary turn effects", () => {
   const game = boot();
-  game.start("double");
+  game.start("story");
   game.chamber = ["blank"];
   game.liveRemaining = 0;
   game.blankRemaining = 1;
@@ -330,7 +289,7 @@ test("Story stage 1 automatically advances after both scripted magazines", () =>
 
 test("Adrenaline cannot select handcuffs when the target is already cuffed", () => {
   const game = boot();
-  game.start("double");
+  game.start("story");
   game.player.handcuffed = true;
   game.player.inventory = ["Handcuffs"];
   game.dealer.inventory = ["Adrenaline"];
@@ -352,7 +311,7 @@ test("Dealer does not waste healing items after its cut wire", () => {
 
 test("Adrenaline excludes already-active Hand Saw and unavailable Burner Phone", () => {
   const game = boot();
-  game.start("double");
+  game.start("story");
   game.isSawedOff = true;
   game.chamber = ["live"];
   game.player.inventory = ["Hand Saw", "Burner Phone"];
@@ -365,7 +324,7 @@ test("Adrenaline excludes already-active Hand Saw and unavailable Burner Phone",
 
 test("Adrenaline expires after the selection window and consumes itself", () => {
   const game = boot();
-  game.start("double");
+  game.start("story");
   game.player.inventory = ["Adrenaline"];
   game.dealer.inventory = ["Beer"];
   game.selectItem("1");
@@ -380,7 +339,7 @@ test("Adrenaline expires after the selection window and consumes itself", () => 
 
 test("choosing an Adrenaline target cancels its timeout and uses the stolen item", () => {
   const game = boot();
-  game.start("double");
+  game.start("story");
   game.player.inventory = ["Adrenaline"];
   game.dealer.inventory = ["Beer"];
   game.chamber = ["blank", "live"];
@@ -396,28 +355,34 @@ test("choosing an Adrenaline target cancels its timeout and uses the stolen item
 });
 
 
-test("Double or Nothing is locked until the player wins Story Mode", () => {
+
+
+
+test("placing a bet starts Story Mode immediately without a mode-selection step", () => {
   const game = boot();
-  game.submit("1"); // Choose Story Mode from the main menu.
-  game.submit("0"); // Select free play at the bet prompt.
-  game.submit("2"); // Verify Double or Nothing remains locked.
-  assert.equal(game.mode, "start");
+  game.tutorialSeen = true;
+  game.submit("1");
+  assert.equal(game.mode, "bet");
+  game.submit("5");
+  assert.equal(game.mode, "action");
   assert.equal(game.gameMode, "story");
-  assert.match(game.events.at(-1), /Win Story Mode once/);
+  assert.equal(game.betAmount, 5);
+  assert.equal(game.balance, 995);
 });
 
-test("winning Story Mode unlocks Double or Nothing", () => {
+test("a winning bet pays exactly double the stake", () => {
   const game = boot();
-  game.start("story");
-  game.stage = 3;
-  game.player.health = 1;
-  game.dealer.health = 0;
-  game.dealer.dead = true;
-  assert.equal(game.checkStageEnd(), true);
-  assert.equal(game.doubleUnlocked, true);
-  game.reset();
-  game.submit("0"); // Select free play before choosing a game mode.
-  game.submit("2");
-  assert.equal(game.gameMode, "double");
-  assert.equal(game.mode, "action");
+  game.betAmount = 25;
+  game.balance = 975;
+  game.settleBet(true);
+  assert.equal(game.balance, 1025);
+  assert.ok(game.events.some((event) => /Payout: \$50/.test(event)));
+});
+
+test("a losing bet does not return the stake", () => {
+  const game = boot();
+  game.betAmount = 25;
+  game.balance = 975;
+  game.settleBet(false);
+  assert.equal(game.balance, 975);
 });
