@@ -30,7 +30,7 @@ class RoomManager {
     const room = {
       code, status: "waiting",
       host: { socketId: host.socketId, playerId: host.playerId, username: host.username },
-      guest: null, pending: null, game: null, wager: null,
+      guest: null, pending: null, game: null, wager: null, wager: null,
       createdAt: now, updatedAt: now
     };
     this.rooms.set(code, room);
@@ -38,7 +38,7 @@ class RoomManager {
     return room;
   }
 
-  requestJoin({ socketId, username, code }, now = Date.now()) {
+  requestJoin({ socketId, playerId, username, code }, now = Date.now()) {
     this.expire(now);
     if (!/^\d{4}$/.test(String(code))) return { ok: false, error: "Invalid code." };
     const room = this.rooms.get(String(code));
