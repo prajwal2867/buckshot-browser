@@ -81,17 +81,6 @@
       this.stealableItems = [];
       this.stealOwner = null;
       this.render();
-      screen?.addEventListener?.("click", (event) => {
-        const choice = event.target.closest("[data-main-mode]");
-        if (choice && !choice.disabled && this.mode === "menu") this.submit(choice.dataset.mainMode);
-      });
-      document?.addEventListener?.("keydown", (event) => {
-        if (this.mode !== "menu" || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
-        if (event.key === "1" || event.key === "2" || event.key === "3") {
-          event.preventDefault();
-          this.submit(event.key);
-        }
-      });
     }
 
     makeEntity(name) {
@@ -1002,16 +991,15 @@
         screen.innerHTML = [
           '<span class="title">BUCKSHOT ROULETTE</span>', "",
           `CURRENT BALANCE: ${this.balance.toLocaleString()}`, "",
-          '<div class="menu-options">',
-          '<button class="menu-choice" type="button" data-main-mode="1">&gt; [ 1 ] : STORY MODE</button>',
-          '<button class="menu-choice" type="button" data-main-mode="2">&gt; [ 2 ] : MULTIPLAYER</button>',
-          '</div>',
-          "",
-          "Select mode:"
+          "&gt; [ 1 ] : STORY MODE",
+          "&gt; [ 2 ] : MULTIPLAYER",
+          ""
         ].join("\n");
         promptLabel.textContent = "Select mode:";
-        input.disabled = true;
-        keypadButtons.forEach((button) => button.disabled = true);
+        input.disabled = false;
+        input.placeholder = "Enter 1 or 2";
+        keypadButtons.forEach((button) => button.disabled = false);
+        if (!input.readOnly) input.focus();
         return;
       }
 
