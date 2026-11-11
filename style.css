@@ -12,6 +12,7 @@ body {
 }
 
 .site-header {
+  display: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -202,6 +203,9 @@ main {
 }
 
 #screen .title { font-weight: 700; letter-spacing: 0.035em; }
+#screen .menu-choice { display: block; width: fit-content; border: 0; border-radius: 0; padding: 0; background: transparent; color: inherit; text-align: left; }
+#screen .menu-choice:hover { background: #292929; }
+#screen .bet-note { color: #aaa; font-size: .78em; }
 #screen .separator { color: #777; }
 #screen .bankruptcy-title { color: #ff5c5c; font-weight: 700; letter-spacing: 0.06em; }
 
