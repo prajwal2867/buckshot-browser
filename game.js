@@ -34,11 +34,11 @@
       this.dealer = this.makeEntity("Dealer");
       this.current = this.player;
       this.opponent = this.dealer;
-      this.mode = "bet";
+      this.mode = "menu";
       this.gameMode = "story";
       this.bankruptcyDeferred = false;
       this.balance = this.loadBalance();
-      this.mode = this.balance <= 300 ? "bankruptcy" : "bet";
+      this.mode = "menu";
       this.betAmount = 0;
       this.betSettled = false;
       this.doubleUnlocked = this.loadDoubleOrNothingUnlock();
@@ -66,6 +66,17 @@
       this.stealableItems = [];
       this.stealOwner = null;
       this.render();
+      screen.addEventListener("click", (event) => {
+        const choice = event.target.closest("[data-main-mode]");
+        if (choice && !choice.disabled && this.mode === "menu") this.submit(choice.dataset.mainMode);
+      });
+      document.addEventListener("keydown", (event) => {
+        if (this.mode !== "menu" || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+        if (event.key === "1" || event.key === "2") {
+          event.preventDefault();
+          this.submit(event.key);
+        }
+      });
     }
 
     makeEntity(name) {
@@ -92,6 +103,15 @@
 
     submit(raw) {
       const command = String(raw).trim().toLowerCase();
+      if (this.mode === "menu") {
+        if (command === "1") {
+          this.mode = this.balance <= 300 && !this.bankruptcyDeferred ? "bankruptcy" : "bet";
+          this.render();
+        } else if (command === "2") {
+          window.dispatchEvent(new CustomEvent("buckshot:mode", { detail: "multiplayer" }));
+        }
+        return;
+      }
       if (this.mode === "bet") {
         if (!/^\d+$/.test(command)) {
           this.addEvent("Enter a whole-number bet, or 0 to play without betting.");
@@ -923,18 +943,26 @@
     }
 
     render() {
-      if (this.mode === "bet") {
+      if (this.mode === "menu") {
         screen.innerHTML = [
           '<span class="title">BUCKSHOT ROULETTE</span>', "",
           `CURRENT BALANCE: ${this.balance.toLocaleString()}`, "",
-          "PLACE YOUR BET",
-          "Enter the amount you want to wager.",
-          "Winning pays 1:1 profit (2x your stake in total).",
-          "Enter 0 to play without bets.",
-          `MAXIMUM BET: ${this.balance.toLocaleString()}`, "",
-          '<span class="separator">---</span>'
+          '<button class="menu-choice" type="button" data-main-mode="1">&gt; [ 1 ] : STORY MODE</button>',
+          '<button class="menu-choice" type="button" data-main-mode="2">&gt; [ 2 ] : MULTIPLAYER</button>'
         ].join("\n");
-        promptLabel.textContent = "Bet amount: ";
+        promptLabel.textContent = "Select mode:";
+        input.disabled = true;
+        keypadButtons.forEach((button) => button.disabled = true);
+        return;
+      }
+
+      if (this.mode === "bet") {
+        screen.innerHTML = [
+          '<span class="title">BUCKSHOT ROULETTE</span>', "",
+          `CURRENT BALANCE: ${this.balance.toLocaleString()}`,
+          '<span class="bet-note">[ WINNING BET PAYS OUT DOUBLE YOUR STAKE ]</span>'
+        ].join("\n");
+        promptLabel.textContent = "> ENTER BET AMOUNT: ";
         input.disabled = false;
         if (!input.readOnly) input.focus();
         keypadButtons.forEach((b) => b.disabled = false);
