@@ -323,6 +323,9 @@ body.story-active #command-form label {
   align-items: flex-start;
   text-align: left;
 }
+body.story-active #command-form label:has(.bet-note) {
+  margin-top: .9rem;
+}
 body.story-active #command-input {
   flex: 0 1 14ch;
   max-width: 100%;
