@@ -26,7 +26,7 @@ function boot(randomValues = []) {
     "#prompt-label": label,
     "#keypad": keypad
   };
-  const document = { querySelector: (selector) => nodes[selector] };
+  const document = { querySelector: (selector) => nodes[selector], getElementById: () => null, addEventListener() {} };
   const scheduledTimers = [];
   const window = {
     matchMedia: () => ({ matches: false, addEventListener() {} }),
@@ -140,7 +140,8 @@ test("zero player health ends Story Mode immediately in every stage", () => {
     assert.equal(game.gameOver, true);
     assert.equal(game.mode, "restart");
     assert.equal(game.stage, stage);
-    assert.ok(game.events.some((event) => /ran out of health/i.test(event)));
+    assert.equal(game.gameOver, true);
+    assert.ok(game.events.every((event) => !/ran out of health/i.test(event)));
   }
 });
 
@@ -376,7 +377,7 @@ test("a winning bet pays exactly double the stake", () => {
   game.balance = 975;
   game.settleBet(true);
   assert.equal(game.balance, 1025);
-  assert.ok(game.events.some((event) => /Payout: \$50/.test(event)));
+  assert.ok(game.events.every((event) => !/Payout:/.test(event)));
 });
 
 test("a losing bet does not return the stake", () => {

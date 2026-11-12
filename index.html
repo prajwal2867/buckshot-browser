@@ -78,22 +78,26 @@
         </section>
         <button id="game-start" type="button" hidden>Start match</button>
         <section id="pvp-game" class="pvp-game" hidden aria-label="PvP match">
-          <h2>Match</h2>
-          <p id="pvp-balance" class="help-text"></p>
-          <p id="pvp-wager" class="help-text"></p>
-          <p id="pvp-turn" class="status-line" role="status" aria-live="polite"></p>
+          <p id="pvp-stage" class="pvp-stage">==== STAGE 1 ====</p>
+          <p id="pvp-balance" class="pvp-line"></p>
+          <p id="pvp-wager" class="pvp-line"></p>
+          <p id="pvp-versus" class="pvp-line pvp-versus"></p>
+          <p id="pvp-magazine" class="pvp-line"></p>
+          <p id="pvp-known-shell" class="pvp-line"></p>
           <div id="pvp-scoreboard" class="pvp-scoreboard"></div>
-          <p id="pvp-magazine" class="help-text"></p>
-          <p id="pvp-known-shell" class="help-text"></p>
+          <p class="pvp-separator">---</p>
           <div id="pvp-controls" class="pvp-controls">
-            <button id="pvp-shoot-opponent" type="button">Shoot opponent</button>
-            <button id="pvp-shoot-self" class="secondary-button" type="button">Shoot yourself</button>
+            <button id="pvp-shoot-opponent" type="button">1. Shoot opponent</button>
+            <button id="pvp-shoot-self" class="secondary-button" type="button">2. Shoot yourself</button>
           </div>
           <div id="pvp-inventory" class="pvp-inventory"></div>
           <div id="pvp-steal" class="pvp-steal" hidden></div>
+          <p id="pvp-turn" class="pvp-turn" role="status" aria-live="polite"></p>
+          <p class="pvp-recent-heading">RECENT EVENTS:</p>
           <div id="pvp-events" class="pvp-events" aria-live="polite"></div>
+          <button id="room-leave" class="secondary-button pvp-leave" type="button">4. Leave the room</button>
+          <p id="pvp-action-prompt" class="pvp-action-prompt">Select an action :</p>
         </section>
-        <button id="room-leave" class="secondary-button" type="button">Leave room</button>
         <p id="room-expiry" class="help-text" role="status" aria-live="polite"></p>
       </div>
 

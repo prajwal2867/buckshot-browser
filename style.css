@@ -452,3 +452,143 @@ body.main-menu #command-input {
   .wager-panel .inline-controls { align-items: stretch; }
   .wager-panel input { width: 100%; }
 }
+
+
+/* Multiplayer match uses the same plain terminal transcript as Story Mode. */
+.multiplayer-panel {
+  width: min(100%, 760px);
+  max-width: 760px;
+}
+.pvp-game {
+  margin-top: 1rem;
+  padding-top: 0;
+  border-top: 0;
+  line-height: 1.35;
+}
+.pvp-stage {
+  margin: 0 0 1rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+.pvp-line {
+  margin: .25rem 0;
+  color: inherit;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.pvp-versus {
+  margin: .75rem 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.pvp-scoreboard {
+  display: block;
+  margin: .75rem 0;
+}
+.pvp-scoreboard .pvp-line { margin: .35rem 0; }
+.pvp-separator {
+  margin: 1rem 0;
+  color: #777;
+}
+.pvp-controls,
+.pvp-inventory,
+.pvp-steal {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .1rem;
+  margin: .35rem 0;
+}
+.multiplayer-panel .pvp-controls button,
+.multiplayer-panel .pvp-inventory button,
+.multiplayer-panel .pvp-steal button,
+.multiplayer-panel .pvp-leave {
+  min-height: 0;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  line-height: 1.35;
+}
+.multiplayer-panel .pvp-controls button:hover,
+.multiplayer-panel .pvp-inventory button:hover,
+.multiplayer-panel .pvp-steal button:hover,
+.multiplayer-panel .pvp-leave:hover {
+  background: #292929;
+}
+.multiplayer-panel .pvp-controls button:disabled,
+.multiplayer-panel .pvp-inventory button:disabled {
+  opacity: .38;
+}
+.pvp-turn {
+  margin: 1rem 0;
+  font-weight: 700;
+}
+.pvp-recent-heading {
+  margin: 1rem 0 .35rem;
+  color: #aaa;
+  font-size: .78rem;
+  letter-spacing: .04em;
+}
+.pvp-events {
+  max-height: 180px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: .82rem;
+}
+.pvp-events p {
+  margin: .25rem 0;
+  color: #c7cec9;
+}
+.pvp-action-prompt {
+  margin: 1rem 0 .5rem;
+  font-weight: 700;
+}
+.pvp-known-shell:empty { display: none; }
+@media (max-width: 520px) {
+  .multiplayer-panel { width: 100%; }
+  .pvp-scoreboard { display: block; }
+  .pvp-controls button,
+  .pvp-inventory button,
+  .pvp-steal button,
+  .pvp-leave { min-height: 0 !important; }
+}
+
+
+/* Recent events are one plain-text transcript in both game modes. */
+.event-log,
+.pvp-events {
+  display: block;
+  max-height: 180px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  scrollbar-color: #666 transparent;
+  text-align: left;
+}
+.event-line,
+.pvp-event-line {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #c7cec9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.pvp-events { font-size: .82rem; }
+.pvp-event-line { margin: 0; }

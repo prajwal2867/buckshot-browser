@@ -23,17 +23,7 @@
     "Adrenaline", "Burner Phone", "Inverter", "Expired Medicine"
   ];
   const ALL_ITEMS = [...BASE_ITEMS, ...EXTRA_ITEMS];
-  const ITEM_HELP = {
-    "Magnifying Glass": "Reveal the shell currently in the chamber.",
-    "Handcuffs": "Make the Dealer miss their next turn.",
-    "Beer": "Eject the current shell without firing it.",
-    "Cigarette Pack": "Restore 1 health, up to your normal maximum.",
-    "Hand Saw": "Your next live shot deals 2 damage.",
-    "Adrenaline": "Steal and immediately use one of the Dealer's usable items.",
-    "Burner Phone": "Reveal one upcoming shell in the magazine.",
-    "Inverter": "Turn the current shell from live to blank, or blank to live.",
-    "Expired Medicine": "A 50/50 chance to restore up to 2 health or lose 1."
-  };
+  const ITEM_ORDER = ["Magnifying Glass", "Handcuffs", "Beer", "Cigarette Pack", "Hand Saw", "Inverter", "Burner Phone", "Expired Medicine", "Adrenaline"];
 
   const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
   const randomInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
@@ -93,6 +83,36 @@
     }
 
     addEvent(message) {
+      const allowed = [
+        /^Both sides receive up to \\d+ item\\(s\\), subject to the 8-slot limit\\.$/,
+        /^.+ fires a LIVE shell at .+: \\d+ damage\\.$/,
+        /^.+ fires a BLANK shell at .+\\.$/,
+        /^.+ keeps the turn\\.$/,
+        /^.+ loses this turn because of the handcuffs\\.$/,
+        /^The Dealer loses a turn because of the handcuffs\\.$/,
+        /^The Dealer is thinking\\.\\.\\.$/,
+        /^Stage \\d+ ends\\. (You win|The Dealer wins)\\.$/,
+        /^You survived Story Mode\\. The briefcase is yours\\.$/,
+        /^The Dealer wins\\. You did not survive the final stage\\.$/,
+        /^Final Story Mode cash: [\\d,]+\\.$/,
+        /^.+ steals .+ and uses it immediately\\.$/,
+        /^Adrenaline expired\\. No item was stolen\\.$/,
+        /^.+ checks the chamber: (LIVE|BLANK)\\.$/,
+        /^.+ is handcuffed and will miss their next turn\\.$/,
+        /^.+ racks the shotgun and ejects a (LIVE|BLANK) shell\\.$/,
+        /^.+ restores 1 charge\\.$/,
+        /^.+ is already at maximum normal health\\.$/,
+        /^.+ saws off the barrel\\. The next live shot deals 2 damage\\.$/,
+        /^.+ inverts the current shell to (LIVE|BLANK)\\.$/,
+        /^The Burner Phone reveals shell \\d+: (LIVE|BLANK)\\.$/,
+        /^Medicine works: \\d+ charge\\(s\\) restored\\.$/,
+        /^Medicine backfires: you lose 1 charge\\.$/,
+        /^Choose an item number \\(0 to return\\)\\. Item effects:$/,
+        /^\\d+\\. (Magnifying Glass|Handcuffs|Beer|Cigarette Pack|Hand Saw|Inverter|Burner Phone|Expired Medicine|Adrenaline)$/,
+        /^Choose an opponent item to steal within 5 seconds:$/,
+        /^\\d+\\. .+$/
+      ];
+      if (!allowed.some((pattern) => pattern.test(String(message)))) return;
       this.events.push(message);
       if (this.events.length > 12) this.events.shift();
     }
@@ -636,10 +656,9 @@
         return;
       }
       this.mode = "item";
+      this.itemSelection = ITEM_ORDER.filter((item) => this.player.inventory.includes(item));
       this.addEvent("Choose an item number (0 to return). Item effects:");
-      this.player.inventory.forEach((item, i) =>
-        this.addEvent(`${i + 1}. ${item} — ${ITEM_HELP[item] || "Use this item strategically."}`)
-      );
+      this.itemSelection.forEach((item, i) => this.addEvent((i + 1) + ". " + item));
     }
 
     selectItem(command) {
@@ -648,13 +667,14 @@
         this.render();
         return;
       }
-      const index = Number(command) - 1;
-      if (!Number.isInteger(index) || index < 0 || index >= this.player.inventory.length) {
+      const selection = Number(command) - 1;
+      const availableItems = this.itemSelection || this.player.inventory;
+      if (!Number.isInteger(selection) || selection < 0 || selection >= availableItems.length) {
         this.addEvent("Choose a listed item, or 0 to return.");
         this.render();
         return;
       }
-      const item = this.player.inventory[index];
+      const item = availableItems[selection];
       const result = this.useItem(this.player, item);
       if (result === "steal") {
         this.mode = "steal";
@@ -1052,12 +1072,12 @@
         lines.push("GAME OVER", `FINAL CASH: ${(this.gameMode === "story" ? this.storyCash() : this.winnings).toLocaleString()}`, "Press R to restart.");
       } else if (this.mode === "item") {
         lines.push("INVENTORY — CHOOSE AN ITEM", ...this.player.inventory.map((item, index) =>
-          `${index + 1}. ${item} — ${ITEM_HELP[item] || "Use this item strategically."}`
+          `${index + 1}. ${item}`
         ), "0. Return to your actions");
       } else if (this.mode === "steal") {
         lines.push("ADRENALINE — CHOOSE AN ITEM TO STEAL", "Choose quickly; the opportunity expires after 5 seconds.", '<span id="steal-countdown">5 seconds remaining</span>',
           ...this.stealableItems.map((item, index) =>
-            `${index + 1}. ${item} — ${ITEM_HELP[item] || "Use this item strategically."}`
+            `${index + 1}. ${item}`
           ));
       } else if (this.mode === "waiting") {
         lines.push("The Dealer is thinking…", "Your controls will return when the Dealer finishes.");
@@ -1073,7 +1093,7 @@
       const wasAtEventLogBottom = !previousEventLog ||
         previousEventLog.scrollHeight - previousEventLog.clientHeight - previousEventLog.scrollTop < 24;
       const eventMarkup = this.events.slice(-8)
-        .map((event) => `<div class="event">&gt; ${this.escape(event)}</div>`)
+        .map((event) => `<div class="event-line">&gt; ${this.escape(event)}</div>`)
         .join("");
       screen.innerHTML = `${lines.join("\n")}<div class="event-log" role="log" aria-label="Recent events" aria-live="polite">${eventMarkup}</div>`;
       const eventLog = screen.querySelector(".event-log");
