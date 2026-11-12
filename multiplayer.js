@@ -414,9 +414,9 @@
       lives.textContent = player.username + " LIVES: " + player.health;
       el.scoreboard.append(lives);
     });
-    state.players.forEach((player) => {
+    state.players.forEach((player, index) => {
       const items = document.createElement("p");
-      items.className = "pvp-line";
+      items.className = index === 0 ? "pvp-line pvp-items-start" : "pvp-line";
       items.textContent = player.username + " ITEMS [" + player.inventory.length + "]: " +
         (player.inventory.length ? player.inventory.join(", ") : "none");
       el.scoreboard.append(items);
