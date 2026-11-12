@@ -961,3 +961,37 @@ body.multiplayer-active .pvp-scoreboard .pvp-items-start {
     margin: 0;
   }
 }
+
+
+/* Compact touch keypad for the Multiplayer room-selection screen. */
+.pvp-lobby-keypad { display: none; }
+@media (max-width: 900px), (pointer: coarse), (hover: none) {
+  body.multiplayer-active #multiplayer-lobby:not([hidden]) .pvp-lobby-keypad {
+    display: grid;
+    position: fixed;
+    z-index: 1000;
+    left: 50%;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: min(calc(100vw - 24px), 320px);
+    padding: 8px;
+    border: 1px solid #444;
+    background: #111;
+    box-shadow: 0 -8px 24px rgb(0 0 0 / 45%);
+  }
+  body.multiplayer-active .pvp-lobby-keypad button {
+    min-height: 54px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background: #222;
+    color: #fff;
+    font: inherit;
+    font-size: 20px;
+    touch-action: manipulation;
+  }
+  body.multiplayer-active #multiplayer-lobby:not([hidden]) {
+    padding-bottom: 100px;
+  }
+}
