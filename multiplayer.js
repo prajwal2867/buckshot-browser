@@ -7,6 +7,9 @@
   const usernameKey = "buckshot-browser.username";
   const walletTokenKey = "buckshot-browser.multiplayer-token";
   const usernamePattern = /^[A-Za-z0-9_-]{3,16}$/;
+  const ITEM_ORDER = ["Magnifying Glass", "Handcuffs", "Beer", "Cigarette Pack", "Hand Saw", "Inverter", "Burner Phone", "Expired Medicine", "Adrenaline"];
+  let itemMenuOpen = false;
+  let pendingMenuSelection = null;
   let socket = null;
   let activeRoomCode = null;
   let pendingRequest = null;
@@ -41,8 +44,10 @@
     reconnect: byId("multiplayer-reconnect"), expiry: byId("room-expiry"),
     balance: byId("pvp-balance"), wager: byId("pvp-wager"), versus: byId("pvp-versus"), stage: byId("pvp-stage"), turn: byId("pvp-turn"), scoreboard: byId("pvp-scoreboard"),
     magazine: byId("pvp-magazine"), known: byId("pvp-known-shell"),
-    shootOpponent: byId("pvp-shoot-opponent"), shootSelf: byId("pvp-shoot-self"),
-    inventory: byId("pvp-inventory"), steal: byId("pvp-steal"), events: byId("pvp-events")
+    controls: byId("pvp-controls"), shootOpponent: byId("pvp-shoot-opponent"), shootSelf: byId("pvp-shoot-self"),
+    inventory: byId("pvp-inventory"), steal: byId("pvp-steal"), events: byId("pvp-events"),
+    commandForm: byId("pvp-command-form"), commandPrompt: byId("pvp-command-prompt"),
+    commandInput: byId("pvp-command-input"), keypad: byId("pvp-keypad")
   };
 
   const getWalletToken = () => { try { return localStorage.getItem(walletTokenKey) || ""; } catch { return ""; } };
@@ -158,6 +163,8 @@
       pendingRequest = null;
       isHost = false;
       latestGame = null;
+      itemMenuOpen = false;
+      pendingMenuSelection = null;
       el.room.hidden = true;
       el.game.hidden = true;
       el.start.hidden = true;
@@ -419,33 +426,44 @@
     el.shootOpponent.disabled = !canAct || state.stealOptions.length > 0;
     el.shootSelf.disabled = !canAct || state.stealOptions.length > 0;
 
-    el.inventory.replaceChildren();
     const own = state.players.find((player) => player.isYou);
-    if (own?.inventory.length) {
-      const itemMenu = document.createElement("div");
-      itemMenu.className = "pvp-item-menu";
-      itemMenu.hidden = true;
-      const heading = makeButton("3. Use an item", () => {
-        itemMenu.hidden = !itemMenu.hidden;
-        heading.setAttribute("aria-expanded", String(!itemMenu.hidden));
+    if (!state.yourTurn || state.status !== "playing" || !own?.inventory.length || state.stealOptions.length) {
+      itemMenuOpen = false;
+      pendingMenuSelection = null;
+    }
+    if (pendingMenuSelection && own) {
+      const remaining = own.inventory.filter((item) => item === pendingMenuSelection.item).length;
+      if (remaining < pendingMenuSelection.count) {
+        itemMenuOpen = false;
+        pendingMenuSelection = null;
+      }
+    }
+    el.inventory.replaceChildren();
+    const useItem = makeButton("3. Use an item", () => {
+      itemMenuOpen = Boolean(own?.inventory.length);
+      sendAction({ type: "item:menu" });
+      if (latestGame) renderGame(latestGame);
+    });
+    useItem.className = "pvp-use-item";
+    useItem.disabled = !canAct || state.stealOptions.length > 0;
+    useItem.hidden = itemMenuOpen || state.stealOptions.length > 0;
+    el.inventory.append(useItem);
+    el.controls.hidden = itemMenuOpen || state.stealOptions.length > 0;
+    if (itemMenuOpen && own?.inventory.length) {
+      const heading = document.createElement("p");
+      heading.className = "pvp-line";
+      heading.textContent = "INVENTORY — CHOOSE AN ITEM";
+      el.inventory.append(heading);
+      ITEM_ORDER.filter((item) => own.inventory.includes(item)).forEach((item, index) => {
+        const line = document.createElement("p");
+        line.className = "pvp-line";
+        line.textContent = (index + 1) + ". " + item;
+        el.inventory.append(line);
       });
-      heading.className = "pvp-use-item";
-      heading.disabled = !canAct || state.stealOptions.length > 0;
-      heading.setAttribute("aria-expanded", "false");
-      heading.setAttribute("aria-controls", "pvp-item-options");
-      itemMenu.id = "pvp-item-options";
-      own.inventory.forEach((item, index) => {
-        const button = makeButton("> " + item, () => sendAction({ type: "item", itemIndex: index }), "secondary-button");
-        button.className += " pvp-item-action";
-        button.disabled = !canAct || state.stealOptions.length > 0;
-        itemMenu.append(button);
-      });
-      el.inventory.append(heading, itemMenu);
-    } else {
-      const noItems = document.createElement("p");
-      noItems.className = "pvp-line";
-      noItems.textContent = "3. Use an item (none available)";
-      el.inventory.append(noItems);
+      const back = document.createElement("p");
+      back.className = "pvp-line";
+      back.textContent = "0. Return to your actions";
+      el.inventory.append(back);
     }
 
     el.steal.hidden = !state.stealOptions.length;
@@ -453,14 +471,25 @@
     if (state.stealOptions.length) {
       const heading = document.createElement("p");
       heading.className = "pvp-line";
-      heading.textContent = "Choose an item to steal:";
+      heading.textContent = "ADRENALINE — CHOOSE AN ITEM TO STEAL";
       el.steal.append(heading);
+      const instruction = document.createElement("p");
+      instruction.className = "pvp-line";
+      instruction.textContent = "Choose quickly; select an item number.";
+      el.steal.append(instruction);
       state.stealOptions.forEach((item, index) => {
-        const button = makeButton("> " + item, () => sendAction({ type: "steal", itemIndex: index }));
-        button.disabled = !canAct;
-        el.steal.append(button);
+        const line = document.createElement("p");
+        line.className = "pvp-line";
+        line.textContent = (index + 1) + ". " + item;
+        el.steal.append(line);
       });
     }
+    const choosingItem = itemMenuOpen || state.stealOptions.length > 0;
+    el.commandForm.hidden = !choosingItem;
+    el.commandPrompt.textContent = state.stealOptions.length ? "Steal item number:" : "Item number:";
+    el.commandInput.disabled = !canAct;
+    el.keypad.querySelectorAll("button").forEach((button) => { button.disabled = !canAct; });
+    if (choosingItem && canAct) el.commandInput.focus();
 
     el.turn.textContent = state.status === "finished"
       ? "(" + (state.winner || "A player") + " wins.)"
@@ -468,6 +497,9 @@
     el.leave.textContent = "4. Leave the room";
     el.leave.classList.add("pvp-terminal-action");
 
+    const previousEventLog = el.events;
+    const wasAtEventLogBottom = previousEventLog.scrollHeight - previousEventLog.clientHeight - previousEventLog.scrollTop < 24;
+    const previousScrollTop = previousEventLog.scrollTop;
     el.events.replaceChildren();
     state.events.slice(-8).forEach((message) => {
       const line = document.createElement("p");
@@ -475,11 +507,57 @@
       line.textContent = "> " + message;
       el.events.append(line);
     });
+    if (wasAtEventLogBottom) el.events.scrollTop = el.events.scrollHeight;
+    else el.events.scrollTop = previousScrollTop;
     el.shootOpponent.disabled = !canAct || state.stealOptions.length > 0;
     el.shootSelf.disabled = !canAct || state.stealOptions.length > 0;
     el.actionPrompt = byId("pvp-action-prompt");
+    el.actionPrompt.hidden = choosingItem;
     el.actionPrompt.textContent = state.status === "finished" ? "MATCH COMPLETE." : "SELECT AN ACTION:";
   }
+
+  el.commandForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const command = el.commandInput.value.trim();
+    el.commandInput.value = "";
+    if (!latestGame || actionPending) return;
+    if (latestGame.stealOptions.length) {
+      const index = Number(command) - 1;
+      if (!Number.isInteger(index) || index < 0 || index >= latestGame.stealOptions.length) {
+        sendAction({ type: "steal:invalid" });
+        return;
+      }
+      sendAction({ type: "steal", itemIndex: index });
+      return;
+    }
+    const own = latestGame.players.find((player) => player.isYou);
+    const availableItems = ITEM_ORDER.filter((item) => own?.inventory.includes(item));
+    if (command === "0") {
+      itemMenuOpen = false;
+      pendingMenuSelection = null;
+      renderGame(latestGame);
+      return;
+    }
+    const selection = Number(command) - 1;
+    if (!Number.isInteger(selection) || selection < 0 || selection >= availableItems.length) {
+      sendAction({ type: "item:invalid" });
+      return;
+    }
+    const item = availableItems[selection];
+    const itemIndex = own.inventory.indexOf(item);
+    pendingMenuSelection = { item, count: own.inventory.filter((candidate) => candidate === item).length };
+    sendAction({ type: "item", itemIndex });
+  });
+  el.keypad.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+    if (!button || button.disabled) return;
+    const key = button.dataset.key;
+    if (key === "enter") el.commandForm.requestSubmit();
+    else if (key === "clear") el.commandInput.value = "";
+    else if (key === "backspace") el.commandInput.value = el.commandInput.value.slice(0, -1);
+    else el.commandInput.value += key;
+    el.commandInput.focus();
+  });
 
   el.wagerForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -512,6 +590,8 @@
     el.shootSelf.disabled = true;
     el.inventory.querySelectorAll("button").forEach((button) => { button.disabled = true; });
     el.steal.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+    el.commandInput.disabled = true;
+    el.keypad.querySelectorAll("button").forEach((button) => { button.disabled = true; });
     socket.emit("game:action", { code: activeRoomCode, action });
   }
 
@@ -643,6 +723,14 @@
       target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)
     );
     if (isTyping) return;
+    if (itemMenuOpen || latestGame?.stealOptions?.length) {
+      if (/^[0-9]$/.test(event.key)) {
+        event.preventDefault();
+        el.commandInput.value += event.key;
+        el.commandInput.focus();
+      }
+      return;
+    }
 
     const key = event.key;
     let action = null;

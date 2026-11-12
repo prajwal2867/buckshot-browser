@@ -5,6 +5,7 @@ const BASE_ITEMS = [
 ];
 const EXTRA_ITEMS = ["Adrenaline", "Burner Phone", "Inverter", "Expired Medicine"];
 const ALL_ITEMS = [...BASE_ITEMS, ...EXTRA_ITEMS];
+const ITEM_ORDER = ["Magnifying Glass", "Handcuffs", "Beer", "Cigarette Pack", "Hand Saw", "Inverter", "Burner Phone", "Expired Medicine", "Adrenaline"];
 const MAX_INVENTORY = 8;
 
 function randomInt(min, max, random = Math.random) {
@@ -227,6 +228,10 @@ function performAction(state, playerId, action, random = Math.random) {
   if (!action || typeof action !== "object") return { ok: false, error: "Invalid action." };
 
   if (state.pendingSteal) {
+    if (state.pendingSteal.playerId === playerId && action.type === "steal:invalid") {
+      addEvent(state, "Choose a listed item to steal.", playerId);
+      return { ok: true };
+    }
     if (state.pendingSteal.playerId !== playerId || action.type !== "steal" ||
         !Number.isInteger(action.itemIndex)) return { ok: false, error: "Choose an item to steal first." };
     const candidates = state.pendingSteal.candidates;
@@ -244,6 +249,22 @@ function performAction(state, playerId, action, random = Math.random) {
     if (adrenalineIndex >= 0) player.inventory.splice(adrenalineIndex, 1);
     addEvent(state, player.username + " steals and uses " + item + ".");
     finishIfDead(state);
+    return { ok: true };
+  }
+
+  if (action.type === "item:menu") {
+    if (!player.inventory.length) {
+      addEvent(state, "Your inventory is empty.", playerId);
+      return { ok: true };
+    }
+    addEvent(state, "Choose an item number (0 to return). Item effects:", playerId);
+    ITEM_ORDER.filter((item) => player.inventory.includes(item)).forEach((item, index) => {
+      addEvent(state, (index + 1) + ". " + item, playerId);
+    });
+    return { ok: true };
+  }
+  if (action.type === "item:invalid") {
+    addEvent(state, "Choose a listed item, or 0 to return.", playerId);
     return { ok: true };
   }
 

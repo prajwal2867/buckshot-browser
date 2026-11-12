@@ -552,6 +552,22 @@ body.main-menu #command-input {
 .pvp-known-shell:empty { display: none; }
 @media (max-width: 520px) {
   .multiplayer-panel { width: 100%; }
+  .multiplayer-panel .pvp-command-form { align-items: flex-start; flex-direction: column; }
+  .multiplayer-panel .pvp-command-form input { min-height: 36px; font-size: 16px; }
+  .multiplayer-panel .pvp-keypad {
+    display: grid;
+    width: min(100%, 320px);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    margin-top: .5rem;
+  }
+  .multiplayer-panel .pvp-keypad button {
+    min-height: 40px !important;
+    border: 1px solid #555;
+    background: #222;
+    touch-action: manipulation;
+  }
+  .multiplayer-panel .pvp-keypad .enter-key { grid-column: span 2; }
   .pvp-scoreboard { display: block; }
   .pvp-controls button,
   .pvp-inventory button,
@@ -619,4 +635,41 @@ body.main-menu #command-input {
   color: inherit;
   text-align: left;
   line-height: 1.35;
+}
+
+/* Numbered inventory selection mirrors Story Mode's terminal command flow. */
+.multiplayer-panel .pvp-inventory {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  margin: .25rem 0;
+}
+.multiplayer-panel .pvp-inventory .pvp-line,
+.multiplayer-panel .pvp-steal .pvp-line {
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  line-height: 1.35;
+}
+.multiplayer-panel .pvp-command-form {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin: .25rem 0 0;
+}
+.multiplayer-panel .pvp-command-form label { margin: 0; }
+.multiplayer-panel .pvp-command-form input {
+  flex: 0 1 14ch;
+  width: 14ch;
+  max-width: 100%;
+  min-height: 0;
+  padding: 0;
+  text-align: left;
+}
+.multiplayer-panel .pvp-keypad { display: none; }
+
+@media (max-width: 520px) {
+  .multiplayer-panel .pvp-keypad { display: grid; }
 }
