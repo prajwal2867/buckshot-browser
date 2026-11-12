@@ -41,10 +41,6 @@
             </div>
           </form>
         </div>
-        <div id="pvp-lobby-keypad" class="pvp-lobby-keypad" role="group" aria-label="Room menu keypad">
-          <button type="button" data-lobby-key="1" aria-label="Create room">1</button>
-          <button type="button" data-lobby-key="2" aria-label="Join with code">2</button>
-        </div>
       </div>
 
       <div id="multiplayer-room" hidden>
@@ -106,21 +102,6 @@
             <input id="pvp-command-input" name="command" type="text" inputmode="numeric"
               autocomplete="off" autocapitalize="off" spellcheck="false"
               aria-label="Enter a game command">
-            <div id="pvp-keypad" class="pvp-keypad" role="group" aria-label="Item selection keypad">
-              <button type="button" data-key="1">1</button>
-              <button type="button" data-key="2">2</button>
-              <button type="button" data-key="3">3</button>
-              <button type="button" data-key="backspace" aria-label="Backspace">⌫</button>
-              <button type="button" data-key="4">4</button>
-              <button type="button" data-key="5">5</button>
-              <button type="button" data-key="6">6</button>
-              <button type="button" data-key="clear">Clear</button>
-              <button type="button" data-key="7">7</button>
-              <button type="button" data-key="8">8</button>
-              <button type="button" data-key="9">9</button>
-              <button type="button" data-key="0">0</button>
-              <button type="button" data-key="enter" class="enter-key">Enter</button>
-            </div>
           </form>
         </section>
         <p id="room-expiry" class="help-text" role="status" aria-live="polite"></p>
@@ -130,14 +111,6 @@
       <p id="multiplayer-message" class="multiplayer-message" role="status" aria-live="polite"></p>
     </section>
 
-    <main id="story-mode" aria-label="Buckshot Roulette Story Mode">
-      <div id="screen" aria-live="polite"></div>
-      <form id="command-form" autocomplete="off">
-        <label id="prompt-label" for="command-input">Command:</label>
-        <input id="command-input" name="command" type="text"
-          autocomplete="off" autocapitalize="off" spellcheck="false"
-          aria-label="Enter a game command">
-      </form>
       <div id="keypad" role="group" aria-label="On-screen game controls">
         <button type="button" data-key="1">1</button>
         <button type="button" data-key="2">2</button>
@@ -155,6 +128,15 @@
         <button type="button" data-key="escape" class="escape-key">Esc</button>
         <button type="button" data-key="enter" class="enter-key">Enter</button>
       </div>
+
+    <main id="story-mode" aria-label="Buckshot Roulette Story Mode">
+      <div id="screen" aria-live="polite"></div>
+      <form id="command-form" autocomplete="off">
+        <label id="prompt-label" for="command-input">Command:</label>
+        <input id="command-input" name="command" type="text"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          aria-label="Enter a game command">
+      </form>
     </main>
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" crossorigin="anonymous"></script>
     <script src="game.js"></script>
