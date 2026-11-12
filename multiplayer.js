@@ -39,7 +39,7 @@
     decline: byId("join-decline"), players: byId("room-players"),
     leave: byId("room-leave"), start: byId("game-start"), game: byId("pvp-game"),
     reconnect: byId("multiplayer-reconnect"), expiry: byId("room-expiry"),
-    balance: byId("pvp-balance"), wager: byId("pvp-wager"), versus: byId("pvp-versus"), turn: byId("pvp-turn"), scoreboard: byId("pvp-scoreboard"),
+    balance: byId("pvp-balance"), wager: byId("pvp-wager"), versus: byId("pvp-versus"), stage: byId("pvp-stage"), turn: byId("pvp-turn"), scoreboard: byId("pvp-scoreboard"),
     magazine: byId("pvp-magazine"), known: byId("pvp-known-shell"),
     shootOpponent: byId("pvp-shoot-opponent"), shootSelf: byId("pvp-shoot-self"),
     inventory: byId("pvp-inventory"), steal: byId("pvp-steal"), events: byId("pvp-events")
@@ -311,10 +311,10 @@
       el.start.hidden = true;
       el.wagerPanel.hidden = true;
       el.status.textContent = "MATCH IN PROGRESS";
-      setMessage("The match has started.");
+      clearRoomExpiryCountdown();
+      setMessage("");
     });
     socket.on("game:state", (state) => {
-      startRoomExpiryCountdown();
       actionPending = false;
       latestGame = state;
       renderGame(state);
@@ -389,6 +389,7 @@
     }
 
     el.versus.textContent = "> " + state.players.map((player) => player.username).join(" vs. ");
+    el.stage.textContent = "=== stage 1 ===";
     el.magazine.textContent = "MAG COUNT: " + state.magazine.reload +
       "\nSHELLS: " + state.magazine.remaining + " ( " + state.magazine.live +
       " LIVE / " + state.magazine.blank + " BLANK )";
@@ -421,16 +422,25 @@
     el.inventory.replaceChildren();
     const own = state.players.find((player) => player.isYou);
     if (own?.inventory.length) {
-      const heading = document.createElement("p");
-      heading.className = "pvp-line";
-      heading.textContent = "3. Use an item";
-      el.inventory.append(heading);
+      const itemMenu = document.createElement("div");
+      itemMenu.className = "pvp-item-menu";
+      itemMenu.hidden = true;
+      const heading = makeButton("3. Use an item", () => {
+        itemMenu.hidden = !itemMenu.hidden;
+        heading.setAttribute("aria-expanded", String(!itemMenu.hidden));
+      });
+      heading.className = "pvp-use-item";
+      heading.disabled = !canAct || state.stealOptions.length > 0;
+      heading.setAttribute("aria-expanded", "false");
+      heading.setAttribute("aria-controls", "pvp-item-options");
+      itemMenu.id = "pvp-item-options";
       own.inventory.forEach((item, index) => {
         const button = makeButton("> " + item, () => sendAction({ type: "item", itemIndex: index }), "secondary-button");
         button.className += " pvp-item-action";
         button.disabled = !canAct || state.stealOptions.length > 0;
-        el.inventory.append(button);
+        itemMenu.append(button);
       });
+      el.inventory.append(heading, itemMenu);
     } else {
       const noItems = document.createElement("p");
       noItems.className = "pvp-line";
