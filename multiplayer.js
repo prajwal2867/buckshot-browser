@@ -30,7 +30,7 @@
     title: byId("multiplayer-title"), identity: byId("multiplayer-identity"), username: byId("multiplayer-username"),
     saveUsername: byId("username-save"), changeUsername: byId("username-change"),
     lobby: byId("multiplayer-lobby"), playerName: byId("multiplayer-player-name"),
-    create: byId("room-create"), joinOpen: byId("room-join-open"), lobbyKeypad: byId("pvp-lobby-keypad"),
+    create: byId("room-create"), joinOpen: byId("room-join-open"),
     joinForm: byId("room-join-form"), joinCode: byId("room-code"),
     room: byId("multiplayer-room"), status: byId("multiplayer-status"), wallet: byId("multiplayer-wallet"),
     wagerPanel: byId("wager-panel"), wagerForm: byId("wager-proposal-form"), wagerStake: byId("wager-stake"),
@@ -47,7 +47,7 @@
     controls: byId("pvp-controls"), shootOpponent: byId("pvp-shoot-opponent"), shootSelf: byId("pvp-shoot-self"),
     inventory: byId("pvp-inventory"), steal: byId("pvp-steal"), events: byId("pvp-events"),
     commandForm: byId("pvp-command-form"), commandPrompt: byId("pvp-command-prompt"),
-    commandInput: byId("pvp-command-input"), keypad: byId("pvp-keypad")
+    commandInput: byId("pvp-command-input"), keypad: byId("keypad")
   };
 
   const getWalletToken = () => { try { return localStorage.getItem(walletTokenKey) || ""; } catch { return ""; } };
@@ -103,6 +103,7 @@
   }
 
   function showIdentity() {
+    el.keypad.querySelectorAll("button").forEach((button) => { button.disabled = false; });
     clearRoomExpiryCountdown();
     const username = getUsername();
     el.identity.hidden = Boolean(username);
@@ -558,13 +559,62 @@
     sendAction({ type: "item", itemIndex });
   });
   el.keypad.addEventListener("click", (event) => {
-    const button = event.target.closest("button");
+    if (!document.body.classList.contains("multiplayer-active")) return;
+    const button = event.target.closest("button[data-key]");
     if (!button || button.disabled) return;
     const key = button.dataset.key;
+    const activeField = document.activeElement instanceof HTMLInputElement &&
+      document.activeElement !== el.commandInput && !document.activeElement.disabled
+      ? document.activeElement
+      : null;
+
+    if (key === "escape") {
+      if (!el.joinForm.hidden) {
+        el.joinForm.hidden = true;
+        el.joinOpen.hidden = false;
+        el.joinOpen.focus();
+      } else {
+        showMode("story");
+        if (window.buckshotGame) {
+          window.buckshotGame.mode = "menu";
+          window.buckshotGame.render();
+        }
+      }
+      return;
+    }
+
+    if (activeField) {
+      if (key === "enter") {
+        if (activeField.form?.requestSubmit) activeField.form.requestSubmit();
+        else activeField.blur();
+      } else if (key === "clear") activeField.value = "";
+      else if (key === "backspace") activeField.value = activeField.value.slice(0, -1);
+      else if (/^\\d$/.test(key)) activeField.value += key;
+      return;
+    }
+
+    if (el.game.hidden) {
+      if (!el.identity.hidden && document.activeElement === el.username) return;
+      if (!el.room.hidden && !el.lobby.hidden) return;
+      if (!el.lobby.hidden && el.joinForm.hidden) {
+        if (key === "1") el.create.click();
+        else if (key === "2") el.joinOpen.click();
+        return;
+      }
+      if (key === "enter") {
+        const focused = document.activeElement;
+        if (focused?.form?.requestSubmit) focused.form.requestSubmit();
+      } else if (/^\\d$/.test(key)) {
+        document.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+      }
+      return;
+    }
+
     if (key === "enter") el.commandForm.requestSubmit();
     else if (key === "clear") el.commandInput.value = "";
     else if (key === "backspace") el.commandInput.value = el.commandInput.value.slice(0, -1);
-    else el.commandInput.value += key;
+    else if (/^\\d$/.test(key)) el.commandInput.value += key;
+    else if (key === "r") el.commandInput.value += "r";
     if (!el.commandInput.readOnly) el.commandInput.focus();
   });
 
@@ -617,6 +667,7 @@
     document.body.classList.toggle("multiplayer-active", multiplayer);
     panel.hidden = !multiplayer;
     storyMode.hidden = multiplayer;
+    el.keypad.querySelectorAll("button").forEach((button) => { button.disabled = false; });
     if (multiplayer) {
       if (activeRoomCode) {
         el.identity.hidden = true;
@@ -680,12 +731,6 @@
     el.joinCode.focus();
   });
 
-  el.lobbyKeypad.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-lobby-key]");
-    if (!button) return;
-    if (button.dataset.lobbyKey === "1") el.create.click();
-    if (button.dataset.lobbyKey === "2") el.joinOpen.click();
-  });
   el.joinForm.addEventListener("submit", (event) => {
     event.preventDefault();
     const code = el.joinCode.value.trim();
