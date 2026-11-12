@@ -352,6 +352,7 @@
     }
     if (status === "locked") {
       el.wagerConfirmed.textContent = "BET LOCKED: $" + currentWager.stake + " EACH | POT: $" + currentWager.pot + " | HOST CAN START";
+      el.start.textContent = "1. Start";
       el.start.hidden = !isHost;
     } else if (status === "settled") {
       el.wagerConfirmed.textContent = "BET SETTLED. WINNER PAID $" + currentWager.pot + ".";
@@ -401,11 +402,14 @@
       const lives = document.createElement("p");
       lives.className = "pvp-line";
       lives.textContent = player.username + " LIVES: " + player.health;
+      el.scoreboard.append(lives);
+    });
+    state.players.forEach((player) => {
       const items = document.createElement("p");
       items.className = "pvp-line";
       items.textContent = player.username + " ITEMS [" + player.inventory.length + "]: " +
         (player.inventory.length ? player.inventory.join(", ") : "none");
-      el.scoreboard.append(lives, items);
+      el.scoreboard.append(items);
     });
 
     const canAct = state.status === "playing" && state.yourTurn && !actionPending;
