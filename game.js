@@ -668,12 +668,13 @@
         return;
       }
       const selection = Number(command) - 1;
-      if (!Number.isInteger(selection) || selection < 0 || selection >= (this.itemSelection || []).length) {
+      const availableItems = this.itemSelection || this.player.inventory;
+      if (!Number.isInteger(selection) || selection < 0 || selection >= availableItems.length) {
         this.addEvent("Choose a listed item, or 0 to return.");
         this.render();
         return;
       }
-      const item = this.itemSelection[selection];
+      const item = availableItems[selection];
       const result = this.useItem(this.player, item);
       if (result === "steal") {
         this.mode = "steal";
