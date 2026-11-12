@@ -457,6 +457,7 @@
     el.events.replaceChildren();
     state.events.slice(-8).forEach((message) => {
       const line = document.createElement("p");
+      line.className = "pvp-event-line";
       line.textContent = "> " + message;
       el.events.append(line);
     });
