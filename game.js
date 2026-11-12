@@ -23,17 +23,7 @@
     "Adrenaline", "Burner Phone", "Inverter", "Expired Medicine"
   ];
   const ALL_ITEMS = [...BASE_ITEMS, ...EXTRA_ITEMS];
-  const ITEM_HELP = {
-    "Magnifying Glass": "Reveal the shell currently in the chamber.",
-    "Handcuffs": "Make the Dealer miss their next turn.",
-    "Beer": "Eject the current shell without firing it.",
-    "Cigarette Pack": "Restore 1 health, up to your normal maximum.",
-    "Hand Saw": "Your next live shot deals 2 damage.",
-    "Adrenaline": "Steal and immediately use one of the Dealer's usable items.",
-    "Burner Phone": "Reveal one upcoming shell in the magazine.",
-    "Inverter": "Turn the current shell from live to blank, or blank to live.",
-    "Expired Medicine": "A 50/50 chance to restore up to 2 health or lose 1."
-  };
+  const ITEM_ORDER = ["Magnifying Glass", "Handcuffs", "Beer", "Cigarette Pack", "Hand Saw", "Inverter", "Burner Phone", "Expired Medicine", "Adrenaline"];
 
   const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
   const randomInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
@@ -636,10 +626,9 @@
         return;
       }
       this.mode = "item";
+      this.itemSelection = ITEM_ORDER.filter((item) => this.player.inventory.includes(item));
       this.addEvent("Choose an item number (0 to return). Item effects:");
-      this.player.inventory.forEach((item, i) =>
-        this.addEvent(`${i + 1}. ${item} — ${ITEM_HELP[item] || "Use this item strategically."}`)
-      );
+      this.itemSelection.forEach((item, i) => this.addEvent((i + 1) + ". " + item));
     }
 
     selectItem(command) {
@@ -648,13 +637,13 @@
         this.render();
         return;
       }
-      const index = Number(command) - 1;
-      if (!Number.isInteger(index) || index < 0 || index >= this.player.inventory.length) {
+      const selection = Number(command) - 1;
+      if (!Number.isInteger(selection) || selection < 0 || selection >= (this.itemSelection || []).length) {
         this.addEvent("Choose a listed item, or 0 to return.");
         this.render();
         return;
       }
-      const item = this.player.inventory[index];
+      const item = this.itemSelection[selection];
       const result = this.useItem(this.player, item);
       if (result === "steal") {
         this.mode = "steal";
@@ -1073,7 +1062,7 @@
       const wasAtEventLogBottom = !previousEventLog ||
         previousEventLog.scrollHeight - previousEventLog.clientHeight - previousEventLog.scrollTop < 24;
       const eventMarkup = this.events.slice(-8)
-        .map((event) => `<div class="event">&gt; ${this.escape(event)}</div>`)
+        .map((event) => `<div class="event-line">&gt; ${this.escape(event)}</div>`)
         .join("");
       screen.innerHTML = `${lines.join("\n")}<div class="event-log" role="log" aria-label="Recent events" aria-live="polite">${eventMarkup}</div>`;
       const eventLog = screen.querySelector(".event-log");
