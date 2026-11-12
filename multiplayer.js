@@ -9,6 +9,7 @@
   const usernamePattern = /^[A-Za-z0-9_-]{3,16}$/;
   const ITEM_ORDER = ["Magnifying Glass", "Handcuffs", "Beer", "Cigarette Pack", "Hand Saw", "Inverter", "Burner Phone", "Expired Medicine", "Adrenaline"];
   let itemMenuOpen = false;
+  let pendingMenuSelection = null;
   let socket = null;
   let activeRoomCode = null;
   let pendingRequest = null;
@@ -163,6 +164,7 @@
       isHost = false;
       latestGame = null;
       itemMenuOpen = false;
+      pendingMenuSelection = null;
       el.room.hidden = true;
       el.game.hidden = true;
       el.start.hidden = true;
@@ -425,7 +427,17 @@
     el.shootSelf.disabled = !canAct || state.stealOptions.length > 0;
 
     const own = state.players.find((player) => player.isYou);
-    if (!state.yourTurn || state.status !== "playing" || !own?.inventory.length) itemMenuOpen = false;
+    if (!state.yourTurn || state.status !== "playing" || !own?.inventory.length || state.stealOptions.length) {
+      itemMenuOpen = false;
+      pendingMenuSelection = null;
+    }
+    if (pendingMenuSelection && own) {
+      const remaining = own.inventory.filter((item) => item === pendingMenuSelection.item).length;
+      if (remaining < pendingMenuSelection.count) {
+        itemMenuOpen = false;
+        pendingMenuSelection = null;
+      }
+    }
     el.inventory.replaceChildren();
     const useItem = makeButton("3. Use an item", () => {
       itemMenuOpen = Boolean(own?.inventory.length);
@@ -518,6 +530,7 @@
     const availableItems = ITEM_ORDER.filter((item) => own?.inventory.includes(item));
     if (command === "0") {
       itemMenuOpen = false;
+      pendingMenuSelection = null;
       renderGame(latestGame);
       return;
     }
@@ -528,7 +541,7 @@
     }
     const item = availableItems[selection];
     const itemIndex = own.inventory.indexOf(item);
-    itemMenuOpen = false;
+    pendingMenuSelection = { item, count: own.inventory.filter((candidate) => candidate === item).length };
     sendAction({ type: "item", itemIndex });
   });
   el.keypad.addEventListener("click", (event) => {
