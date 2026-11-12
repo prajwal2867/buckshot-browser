@@ -590,7 +590,7 @@
         else activeField.blur();
       } else if (key === "clear") activeField.value = "";
       else if (key === "backspace") activeField.value = activeField.value.slice(0, -1);
-      else if (/^\\d$/.test(key)) activeField.value += key;
+      else if (/^\d$/.test(key)) activeField.value += key;
       return;
     }
 
@@ -605,7 +605,7 @@
       if (key === "enter") {
         const focused = document.activeElement;
         if (focused?.form?.requestSubmit) focused.form.requestSubmit();
-      } else if (/^\\d$/.test(key)) {
+      } else if (/^\d$/.test(key)) {
         document.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
       }
       return;
@@ -614,7 +614,7 @@
     if (key === "enter") el.commandForm.requestSubmit();
     else if (key === "clear") el.commandInput.value = "";
     else if (key === "backspace") el.commandInput.value = el.commandInput.value.slice(0, -1);
-    else if (/^\\d$/.test(key)) el.commandInput.value += key;
+    else if (/^\d$/.test(key)) el.commandInput.value += key;
     else if (key === "r") el.commandInput.value += "r";
     if (!el.commandInput.readOnly) el.commandInput.focus();
   });
