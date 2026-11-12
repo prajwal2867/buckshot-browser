@@ -585,7 +585,8 @@
 
     if (activeField) {
       if (key === "enter") {
-        if (activeField.form?.requestSubmit) activeField.form.requestSubmit();
+        if (activeField === el.username) el.saveUsername.click();
+        else if (activeField.form?.requestSubmit) activeField.form.requestSubmit();
         else activeField.blur();
       } else if (key === "clear") activeField.value = "";
       else if (key === "backspace") activeField.value = activeField.value.slice(0, -1);
