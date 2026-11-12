@@ -669,3 +669,7 @@ body.main-menu #command-input {
   text-align: left;
 }
 .multiplayer-panel .pvp-keypad { display: none; }
+
+@media (max-width: 520px) {
+  .multiplayer-panel .pvp-keypad { display: grid; }
+}
