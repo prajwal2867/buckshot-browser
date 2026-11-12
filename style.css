@@ -601,7 +601,7 @@ body.main-menu #command-input {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  color: #c7cec9;
+  color: #b8b8b8;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.5;
@@ -804,7 +804,7 @@ body.multiplayer-active .pvp-event-line {
   display: block;
   margin: 0;
   padding: 0;
-  color: #fff;
+  color: #b8b8b8;
   font-size: inherit;
   line-height: 1.5;
   white-space: pre-wrap;
