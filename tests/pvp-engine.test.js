@@ -94,6 +94,33 @@ test("Adrenaline steals and uses a valid opponent item", () => {
   assert.equal(state.sawedOff, true);
 });
 
+test("opening the inventory records Story Mode-style numbered menu events privately", () => {
+  const state = gameWithTurn();
+  state.players[0].inventory = ["Beer", "Hand Saw", "Magnifying Glass", "Beer"];
+  assert.deepEqual(performAction(state, "a", { type: "item:menu" }), { ok: true });
+  const ownEvents = getPlayerView(state, "a").events;
+  const opponentEvents = getPlayerView(state, "b").events;
+  assert.ok(ownEvents.includes("Choose an item number (0 to return). Item effects:"));
+  assert.ok(ownEvents.includes("1. Magnifying Glass"));
+  assert.ok(ownEvents.includes("2. Beer"));
+  assert.ok(ownEvents.includes("3. Hand Saw"));
+  assert.equal(ownEvents.filter((event) => event === "2. Beer").length, 1);
+  assert.equal(opponentEvents.some((event) => event.includes("Choose an item number")), false);
+  assert.equal(opponentEvents.some((event) => event.includes("Magnifying Glass")), false);
+  assert.equal(state.turnPlayerId, "a");
+});
+
+test("empty inventory and invalid item-menu selections are recorded privately", () => {
+  const state = gameWithTurn();
+  performAction(state, "a", { type: "item:menu" });
+  assert.ok(getPlayerView(state, "a").events.includes("Your inventory is empty."));
+  assert.equal(getPlayerView(state, "b").events.includes("Your inventory is empty."), false);
+  state.players[0].inventory = ["Hand Saw"];
+  performAction(state, "a", { type: "item:invalid" });
+  assert.ok(getPlayerView(state, "a").events.includes("Choose a listed item, or 0 to return."));
+  assert.equal(getPlayerView(state, "b").events.includes("Choose a listed item, or 0 to return."), false);
+});
+
 test("inventory item use does not consume the player's turn", () => {
   const state = gameWithTurn();
   state.players[0].inventory = ["Hand Saw"];
