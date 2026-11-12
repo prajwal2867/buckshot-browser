@@ -493,7 +493,7 @@
       : itemMenuOpen ? "Item number:" : "Select an action:";
     el.commandInput.disabled = !canAct;
     el.keypad.querySelectorAll("button").forEach((button) => { button.disabled = !canAct; });
-    if (canAct) el.commandInput.focus();
+    if (canAct && !el.commandInput.readOnly) el.commandInput.focus();
 
     el.turn.textContent = state.status === "finished"
       ? "(" + (state.winner || "A player") + " wins.)"
@@ -565,7 +565,14 @@
     else if (key === "clear") el.commandInput.value = "";
     else if (key === "backspace") el.commandInput.value = el.commandInput.value.slice(0, -1);
     else el.commandInput.value += key;
-    el.commandInput.focus();
+    if (!el.commandInput.readOnly) el.commandInput.focus();
+  });
+
+  const commandInputMedia = window.matchMedia("(max-width: 640px), (pointer: coarse)");
+  el.commandInput.readOnly = commandInputMedia.matches;
+  commandInputMedia.addEventListener("change", () => {
+    el.commandInput.readOnly = commandInputMedia.matches;
+    if (el.commandInput.readOnly && document.activeElement === el.commandInput) el.commandInput.blur();
   });
 
   el.wagerForm.addEventListener("submit", (event) => {
