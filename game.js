@@ -83,6 +83,36 @@
     }
 
     addEvent(message) {
+      const allowed = [
+        /^Both sides receive up to \\d+ item\\(s\\), subject to the 8-slot limit\\.$/,
+        /^.+ fires a LIVE shell at .+: \\d+ damage\\.$/,
+        /^.+ fires a BLANK shell at .+\\.$/,
+        /^.+ keeps the turn\\.$/,
+        /^.+ loses this turn because of the handcuffs\\.$/,
+        /^The Dealer loses a turn because of the handcuffs\\.$/,
+        /^The Dealer is thinking\\.\\.\\.$/,
+        /^Stage \\d+ ends\\. (You win|The Dealer wins)\\.$/,
+        /^You survived Story Mode\\. The briefcase is yours\\.$/,
+        /^The Dealer wins\\. You did not survive the final stage\\.$/,
+        /^Final Story Mode cash: [\\d,]+\\.$/,
+        /^.+ steals .+ and uses it immediately\\.$/,
+        /^Adrenaline expired\\. No item was stolen\\.$/,
+        /^.+ checks the chamber: (LIVE|BLANK)\\.$/,
+        /^.+ is handcuffed and will miss their next turn\\.$/,
+        /^.+ racks the shotgun and ejects a (LIVE|BLANK) shell\\.$/,
+        /^.+ restores 1 charge\\.$/,
+        /^.+ is already at maximum normal health\\.$/,
+        /^.+ saws off the barrel\\. The next live shot deals 2 damage\\.$/,
+        /^.+ inverts the current shell to (LIVE|BLANK)\\.$/,
+        /^The Burner Phone reveals shell \\d+: (LIVE|BLANK)\\.$/,
+        /^Medicine works: \\d+ charge\\(s\\) restored\\.$/,
+        /^Medicine backfires: you lose 1 charge\\.$/,
+        /^Choose an item number \\(0 to return\\)\\. Item effects:$/,
+        /^\\d+\\. (Magnifying Glass|Handcuffs|Beer|Cigarette Pack|Hand Saw|Inverter|Burner Phone|Expired Medicine|Adrenaline)$/,
+        /^Choose an opponent item to steal within 5 seconds:$/,
+        /^\\d+\\. .+$/
+      ];
+      if (!allowed.some((pattern) => pattern.test(String(message)))) return;
       this.events.push(message);
       if (this.events.length > 12) this.events.shift();
     }
