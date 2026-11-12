@@ -558,3 +558,37 @@ body.main-menu #command-input {
   .pvp-steal button,
   .pvp-leave { min-height: 0 !important; }
 }
+
+
+/* Recent events are one plain-text transcript in both game modes. */
+.event-log,
+.pvp-events {
+  display: block;
+  max-height: 180px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  scrollbar-color: #666 transparent;
+  text-align: left;
+}
+.event-line,
+.pvp-event-line {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #c7cec9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.pvp-events { font-size: .82rem; }
+.pvp-event-line { margin: 0; }
