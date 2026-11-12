@@ -592,3 +592,11 @@ body.main-menu #command-input {
 }
 .pvp-events { font-size: .82rem; }
 .pvp-event-line { margin: 0; }
+
+
+/* Match the join-request choices to the numbered terminal menu. */
+.multiplayer-panel .join-request .inline-controls {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .1rem;
+}

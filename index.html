@@ -49,8 +49,8 @@
         <div id="join-request" class="join-request" hidden>
           <p>&gt; <strong id="join-request-name"></strong> wants to join ...</p>
           <div class="inline-controls">
-            <button id="join-accept" type="button">Accept [ 1 ]</button>
-            <button id="join-decline" class="secondary-button" type="button">Decline [ 2 ]</button>
+            <button id="join-accept" type="button">1. Accept</button>
+            <button id="join-decline" class="secondary-button" type="button">2. Decline</button>
           </div>
         </div>
         <div id="room-code-card" hidden>
@@ -78,10 +78,10 @@
         </section>
         <button id="game-start" type="button" hidden>Start match</button>
         <section id="pvp-game" class="pvp-game" hidden aria-label="PvP match">
-          <p id="pvp-stage" class="pvp-stage">==== STAGE 1 ====</p>
-          <p id="pvp-balance" class="pvp-line"></p>
-          <p id="pvp-wager" class="pvp-line"></p>
-          <p id="pvp-versus" class="pvp-line pvp-versus"></p>
+          <p id="pvp-stage" class="pvp-stage" hidden>==== STAGE 1 ====</p>
+          <p id="pvp-balance" class="pvp-line" hidden></p>
+          <p id="pvp-wager" class="pvp-line" hidden></p>
+          <p id="pvp-versus" class="pvp-line pvp-versus" hidden></p>
           <p id="pvp-magazine" class="pvp-line"></p>
           <p id="pvp-known-shell" class="pvp-line"></p>
           <div id="pvp-scoreboard" class="pvp-scoreboard"></div>
@@ -92,11 +92,12 @@
           </div>
           <div id="pvp-inventory" class="pvp-inventory"></div>
           <div id="pvp-steal" class="pvp-steal" hidden></div>
+          <button id="room-leave" class="secondary-button pvp-leave" type="button">4. Leave the room</button>
+          <p class="pvp-separator">---</p>
           <p id="pvp-turn" class="pvp-turn" role="status" aria-live="polite"></p>
           <p class="pvp-recent-heading">RECENT EVENTS:</p>
           <div id="pvp-events" class="pvp-events" aria-live="polite"></div>
-          <button id="room-leave" class="secondary-button pvp-leave" type="button">4. Leave the room</button>
-          <p id="pvp-action-prompt" class="pvp-action-prompt">Select an action :</p>
+          <p id="pvp-action-prompt" class="pvp-action-prompt">SELECT AN ACTION:</p>
         </section>
         <p id="room-expiry" class="help-text" role="status" aria-live="polite"></p>
       </div>
