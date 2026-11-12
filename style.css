@@ -577,6 +577,9 @@ body.main-menu #command-input {
 
 
 /* Recent events are one plain-text transcript in both game modes. */
+.event-log {
+  margin-top: 1.25rem;
+}
 .event-log,
 .pvp-events {
   display: block;
@@ -794,7 +797,7 @@ body.multiplayer-active .pvp-recent-heading {
 }
 body.multiplayer-active .pvp-events {
   max-height: 180px;
-  margin: 8px 0 0;
+  margin: 8px 0 1rem;
   padding: 0;
   border: 0;
   background: transparent;
