@@ -505,7 +505,7 @@
     const wasAtEventLogBottom = previousEventLog.scrollHeight - previousEventLog.clientHeight - previousEventLog.scrollTop < 24;
     const previousScrollTop = previousEventLog.scrollTop;
     el.events.replaceChildren();
-    state.events.slice(-8).forEach((message) => {
+    state.events.forEach((message) => {
       const line = document.createElement("p");
       line.className = "pvp-event-line";
       line.textContent = "> " + message;
