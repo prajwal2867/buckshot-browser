@@ -97,12 +97,11 @@
           <p id="pvp-turn" class="pvp-turn" role="status" aria-live="polite"></p>
           <p class="pvp-recent-heading">RECENT EVENTS:</p>
           <div id="pvp-events" class="pvp-events" aria-live="polite"></div>
-          <p id="pvp-action-prompt" class="pvp-action-prompt">SELECT AN ACTION:</p>
-          <form id="pvp-command-form" class="pvp-command-form" autocomplete="off" hidden>
-            <label id="pvp-command-prompt" for="pvp-command-input">Item number:</label>
+          <form id="pvp-command-form" class="pvp-command-form" autocomplete="off">
+            <label id="pvp-command-prompt" for="pvp-command-input">Select an action:</label>
             <input id="pvp-command-input" name="command" type="text" inputmode="numeric"
               autocomplete="off" autocapitalize="off" spellcheck="false"
-              aria-label="Enter an item number">
+              aria-label="Enter a game command">
             <div id="pvp-keypad" class="pvp-keypad" role="group" aria-label="Item selection keypad">
               <button type="button" data-key="1">1</button>
               <button type="button" data-key="2">2</button>

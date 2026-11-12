@@ -257,10 +257,8 @@ function performAction(state, playerId, action, random = Math.random) {
       addEvent(state, "Your inventory is empty.", playerId);
       return { ok: true };
     }
-    addEvent(state, "Choose an item number (0 to return). Item effects:", playerId);
-    ITEM_ORDER.filter((item) => player.inventory.includes(item)).forEach((item, index) => {
-      addEvent(state, (index + 1) + ". " + item, playerId);
-    });
+    // The client renders the numbered inventory menu in the terminal transcript.
+    // Do not duplicate private menu instructions and item names in Recent Events.
     return { ok: true };
   }
   if (action.type === "item:invalid") {

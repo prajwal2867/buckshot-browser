@@ -27,7 +27,7 @@
   const pendingIdentityEmits = [];
 
   const el = {
-    identity: byId("multiplayer-identity"), username: byId("multiplayer-username"),
+    title: byId("multiplayer-title"), identity: byId("multiplayer-identity"), username: byId("multiplayer-username"),
     saveUsername: byId("username-save"), changeUsername: byId("username-change"),
     lobby: byId("multiplayer-lobby"), playerName: byId("multiplayer-player-name"),
     create: byId("room-create"), joinOpen: byId("room-join-open"),
@@ -378,6 +378,7 @@
 
   function renderGame(state) {
     el.game.hidden = false;
+    el.title.hidden = true;
     el.start.hidden = true;
     el.status.hidden = true;
     el.wallet.hidden = true;
@@ -385,18 +386,19 @@
     el.balance.textContent = "CURRENT BALANCE: $" + (walletState?.balance ?? "—");
 
     if (currentWager?.status === "settled") {
-      el.wager.textContent = "BET SETTLED | POT PAID: $" + currentWager.pot;
+      el.wager.textContent = "ACTIVE BET: $" + currentWager.stake +
+        " | WIN: +$" + currentWager.stake + " | PAYOUT: $" + currentWager.pot;
     } else if (currentWager?.status === "refunded") {
-      el.wager.textContent = "BET REFUNDED";
+      el.wager.textContent = "ACTIVE BET: NONE";
     } else if (currentWager?.status === "locked") {
       el.wager.textContent = "ACTIVE BET: $" + currentWager.stake +
-        " | WIN: $" + currentWager.stake + " | LOCKED: $" + currentWager.stake;
+        " | WIN: +$" + currentWager.stake + " | PAYOUT: $" + currentWager.pot;
     } else {
-      el.wager.textContent = "NO ACTIVE BET";
+      el.wager.textContent = "ACTIVE BET: NONE";
     }
 
     el.versus.textContent = "> " + state.players.map((player) => player.username).join(" vs. ");
-    el.stage.textContent = "=== stage 1 ===";
+    el.stage.textContent = "==== MULTIPLAYER | STAGE 1 | RELOAD " + state.magazine.reload + " ====";
     el.magazine.textContent = "MAG COUNT: " + state.magazine.reload +
       "\nSHELLS: " + state.magazine.remaining + " ( " + state.magazine.live +
       " LIVE / " + state.magazine.blank + " BLANK )";
@@ -485,11 +487,13 @@
       });
     }
     const choosingItem = itemMenuOpen || state.stealOptions.length > 0;
-    el.commandForm.hidden = !choosingItem;
-    el.commandPrompt.textContent = state.stealOptions.length ? "Steal item number:" : "Item number:";
+    el.commandForm.hidden = false;
+    el.commandPrompt.textContent = state.stealOptions.length
+      ? "Steal item number:"
+      : itemMenuOpen ? "Item number:" : "Select an action:";
     el.commandInput.disabled = !canAct;
     el.keypad.querySelectorAll("button").forEach((button) => { button.disabled = !canAct; });
-    if (choosingItem && canAct) el.commandInput.focus();
+    if (canAct) el.commandInput.focus();
 
     el.turn.textContent = state.status === "finished"
       ? "(" + (state.winner || "A player") + " wins.)"
@@ -511,9 +515,6 @@
     else el.events.scrollTop = previousScrollTop;
     el.shootOpponent.disabled = !canAct || state.stealOptions.length > 0;
     el.shootSelf.disabled = !canAct || state.stealOptions.length > 0;
-    el.actionPrompt = byId("pvp-action-prompt");
-    el.actionPrompt.hidden = choosingItem;
-    el.actionPrompt.textContent = state.status === "finished" ? "MATCH COMPLETE." : "SELECT AN ACTION:";
   }
 
   el.commandForm.addEventListener("submit", (event) => {
@@ -531,6 +532,14 @@
       return;
     }
     const own = latestGame.players.find((player) => player.isYou);
+    if (!itemMenuOpen) {
+      if (command === "1") return sendAction({ type: "shoot", target: "opponent" });
+      if (command === "2") return sendAction({ type: "shoot", target: "self" });
+      if (command === "3") return el.inventory.querySelector(".pvp-use-item")?.click();
+      if (command === "4") return el.leave.click();
+      setMessage("Choose 1, 2, 3, or 4.");
+      return;
+    }
     const availableItems = ITEM_ORDER.filter((item) => own?.inventory.includes(item));
     if (command === "0") {
       itemMenuOpen = false;
@@ -598,6 +607,7 @@
   function showMode(mode) {
     const multiplayer = mode === "multiplayer";
     document.body.classList.toggle("story-active", !multiplayer);
+    document.body.classList.toggle("multiplayer-active", multiplayer);
     panel.hidden = !multiplayer;
     storyMode.hidden = multiplayer;
     if (multiplayer) {
@@ -776,6 +786,7 @@
     currentWager = null;
     identityReady = false;
     el.game.hidden = true;
+    el.title.hidden = false;
     el.start.hidden = true;
     el.room.hidden = true;
     el.request.hidden = true;

@@ -673,3 +673,244 @@ body.main-menu #command-input {
 @media (max-width: 520px) {
   .multiplayer-panel .pvp-keypad { display: grid; }
 }
+
+
+/* Multiplayer uses Story Mode's terminal layout and typography throughout. */
+body.multiplayer-active {
+  padding: 12px;
+}
+body.multiplayer-active .site-header {
+  width: 100%;
+  max-width: none;
+  margin: 0 0 18px;
+  justify-content: flex-start;
+}
+body.multiplayer-active .site-brand,
+body.multiplayer-active .multiplayer-panel,
+body.multiplayer-active .multiplayer-panel *,
+body.multiplayer-active .pvp-game,
+body.multiplayer-active .pvp-game * {
+  color: #fff;
+  font-family: Consolas, "Courier New", monospace;
+}
+body.multiplayer-active .multiplayer-panel {
+  box-sizing: border-box;
+  width: min(100%, 760px);
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0;
+  line-height: 1.35;
+}
+body.multiplayer-active .terminal-title {
+  font-size: inherit;
+  letter-spacing: .035em;
+}
+body.multiplayer-active .multiplayer-panel .help-text,
+body.multiplayer-active .multiplayer-panel .multiplayer-message,
+body.multiplayer-active .pvp-recent-heading,
+body.multiplayer-active .pvp-events,
+body.multiplayer-active .pvp-event-line,
+body.multiplayer-active #pvp-balance,
+body.multiplayer-active #pvp-wager {
+  color: #fff;
+  font-size: inherit;
+}
+body.multiplayer-active .pvp-game {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  line-height: 1.35;
+}
+body.multiplayer-active .pvp-stage {
+  margin: 0 0 1rem;
+  font-size: inherit;
+  font-weight: 700;
+  letter-spacing: .035em;
+}
+body.multiplayer-active .pvp-line,
+body.multiplayer-active .pvp-scoreboard .pvp-line {
+  margin: 0;
+  color: #fff;
+  font-size: inherit;
+  line-height: 1.35;
+}
+body.multiplayer-active .pvp-versus {
+  margin: .35rem 0;
+  font-size: inherit;
+  font-weight: 400;
+}
+body.multiplayer-active .pvp-scoreboard {
+  display: block;
+  margin: .75rem 0;
+}
+body.multiplayer-active .pvp-controls,
+body.multiplayer-active .pvp-inventory,
+body.multiplayer-active .pvp-steal {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  margin: .25rem 0;
+}
+body.multiplayer-active .multiplayer-panel .pvp-controls button,
+body.multiplayer-active .multiplayer-panel .pvp-inventory button,
+body.multiplayer-active .multiplayer-panel .pvp-steal button,
+body.multiplayer-active .multiplayer-panel .pvp-leave {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  line-height: 1.35;
+}
+body.multiplayer-active .multiplayer-panel .pvp-controls button:hover,
+body.multiplayer-active .multiplayer-panel .pvp-inventory button:hover,
+body.multiplayer-active .multiplayer-panel .pvp-steal button:hover,
+body.multiplayer-active .multiplayer-panel .pvp-leave:hover {
+  background: #292929;
+}
+body.multiplayer-active .multiplayer-panel button:disabled {
+  color: #fff;
+  opacity: 1;
+}
+body.multiplayer-active .pvp-separator {
+  margin: 1rem 0;
+  color: #fff;
+}
+body.multiplayer-active .pvp-turn {
+  margin: 1rem 0;
+  color: #fff;
+  font-size: inherit;
+  font-weight: 700;
+}
+body.multiplayer-active .pvp-recent-heading {
+  margin: 1rem 0 .35rem;
+  font-weight: 700;
+  letter-spacing: .035em;
+}
+body.multiplayer-active .pvp-events {
+  max-height: 180px;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: inherit;
+}
+body.multiplayer-active .pvp-event-line {
+  display: block;
+  margin: 0;
+  padding: 0;
+  color: #fff;
+  font-size: inherit;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+body.multiplayer-active .pvp-command-form {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: .25rem 0 0;
+  font: inherit;
+  line-height: 1.2;
+}
+body.multiplayer-active .pvp-command-form label {
+  flex: 0 0 auto;
+  margin: 0;
+  font: inherit;
+}
+body.multiplayer-active .pvp-command-form input {
+  box-sizing: border-box;
+  min-width: 0;
+  flex: 0 1 14ch;
+  width: 14ch;
+  max-width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  text-align: left;
+}
+body.multiplayer-active .wager-panel {
+  margin: .5rem 0;
+  padding: .5rem 0;
+  border: 0;
+}
+body.multiplayer-active .wager-panel input {
+  width: min(100%, 180px);
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid #fff;
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+}
+body.multiplayer-active .wager-panel .help-text {
+  margin: .4rem 0 0;
+}
+body.multiplayer-active .pvp-known-shell:empty {
+  display: none;
+}
+
+@media (max-width: 640px), (pointer: coarse) {
+  body.multiplayer-active {
+    box-sizing: border-box;
+    min-height: 100vh;
+    padding: 8px 8px 220px;
+  }
+  body.multiplayer-active .multiplayer-panel {
+    width: 100%;
+  }
+  body.multiplayer-active .pvp-command-form {
+    min-height: 32px;
+  }
+  body.multiplayer-active .pvp-command-form input {
+    font-size: 16px;
+  }
+  body.multiplayer-active .pvp-keypad {
+    display: grid !important;
+    position: fixed;
+    z-index: 50;
+    left: 50%;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    box-sizing: border-box;
+    width: min(calc(100vw - 16px), 360px);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    margin: 0;
+    padding: 8px;
+    border: 1px solid #444;
+    background: #111;
+    box-shadow: 0 -8px 24px rgb(0 0 0 / 45%);
+  }
+  body.multiplayer-active .pvp-keypad button {
+    min-width: 0;
+    min-height: 44px !important;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background: #222;
+    color: #fff;
+    font: inherit;
+    font-size: 16px;
+    touch-action: manipulation;
+  }
+  body.multiplayer-active .pvp-keypad button:active {
+    background: #444;
+  }
+  body.multiplayer-active .pvp-keypad .enter-key {
+    grid-column: span 2;
+  }
+}

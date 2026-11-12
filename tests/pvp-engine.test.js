@@ -94,17 +94,14 @@ test("Adrenaline steals and uses a valid opponent item", () => {
   assert.equal(state.sawedOff, true);
 });
 
-test("opening the inventory records Story Mode-style numbered menu events privately", () => {
+test("opening the inventory does not duplicate its menu inside Recent Events", () => {
   const state = gameWithTurn();
   state.players[0].inventory = ["Beer", "Hand Saw", "Magnifying Glass", "Beer"];
   assert.deepEqual(performAction(state, "a", { type: "item:menu" }), { ok: true });
   const ownEvents = getPlayerView(state, "a").events;
   const opponentEvents = getPlayerView(state, "b").events;
-  assert.ok(ownEvents.includes("Choose an item number (0 to return). Item effects:"));
-  assert.ok(ownEvents.includes("1. Magnifying Glass"));
-  assert.ok(ownEvents.includes("2. Beer"));
-  assert.ok(ownEvents.includes("3. Hand Saw"));
-  assert.equal(ownEvents.filter((event) => event === "2. Beer").length, 1);
+  assert.equal(ownEvents.some((event) => event.includes("Choose an item number")), false);
+  assert.equal(ownEvents.some((event) => event.includes("Magnifying Glass")), false);
   assert.equal(opponentEvents.some((event) => event.includes("Choose an item number")), false);
   assert.equal(opponentEvents.some((event) => event.includes("Magnifying Glass")), false);
   assert.equal(state.turnPlayerId, "a");
