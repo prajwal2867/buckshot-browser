@@ -141,7 +141,7 @@ test("zero player health ends Story Mode immediately in every stage", () => {
     assert.equal(game.mode, "restart");
     assert.equal(game.stage, stage);
     assert.equal(game.gameOver, true);
-    assert.ok(game.events.every((event) => !/ran out of health/i.test(event)));
+    assert.ok(game.events.some((event) => /ran out of health/i.test(event)));
   }
 });
 
@@ -377,7 +377,7 @@ test("a winning bet pays exactly double the stake", () => {
   game.balance = 975;
   game.settleBet(true);
   assert.equal(game.balance, 1025);
-  assert.ok(game.events.every((event) => !/Payout:/.test(event)));
+  assert.ok(game.events.some((event) => /Payout:/.test(event)));
 });
 
 test("a losing bet does not return the stake", () => {
@@ -386,4 +386,25 @@ test("a losing bet does not return the stake", () => {
   game.balance = 975;
   game.settleBet(false);
   assert.equal(game.balance, 975);
+});
+
+
+test("recent event history keeps meaningful messages outside the former allowlist", () => {
+  const game = boot();
+  game.addEvent("Reload 1: 3 shells (1 live, 2 blank).");
+  game.addEvent("BET WON: +$25 profit. Payout: $50.");
+  game.addEvent("A custom gameplay event is recorded.");
+  assert.deepEqual(Array.from(game.events), [
+    "Reload 1: 3 shells (1 live, 2 blank).",
+    "BET WON: +$25 profit. Payout: $50.",
+    "A custom gameplay event is recorded."
+  ]);
+});
+
+test("recent event history is capped at the latest 30 messages", () => {
+  const game = boot();
+  for (let i = 1; i <= 35; i++) game.addEvent("Event " + i);
+  assert.equal(game.events.length, 30);
+  assert.equal(game.events[0], "Event 6");
+  assert.equal(game.events.at(-1), "Event 35");
 });
