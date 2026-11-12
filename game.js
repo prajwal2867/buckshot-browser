@@ -1064,12 +1064,14 @@
       const previousEventLog = screen.querySelector(".event-log");
       const wasAtEventLogBottom = !previousEventLog ||
         previousEventLog.scrollHeight - previousEventLog.clientHeight - previousEventLog.scrollTop < 24;
-      const eventMarkup = this.events.slice(-8)
+      const previousEventLogScrollTop = previousEventLog?.scrollTop || 0;
+      const eventMarkup = this.events
         .map((event) => `<div class="event-line">&gt; ${this.escape(event)}</div>`)
         .join("");
       screen.innerHTML = `${lines.join("\n")}<div class="event-log" role="log" aria-label="Recent events" aria-live="polite">${eventMarkup}</div>`;
       const eventLog = screen.querySelector(".event-log");
       if (wasAtEventLogBottom) eventLog.scrollTop = eventLog.scrollHeight;
+      else eventLog.scrollTop = previousEventLogScrollTop;
 
       const prompts = {
         item: "Item number:", steal: "Steal item number:",
