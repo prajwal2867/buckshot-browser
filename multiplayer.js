@@ -511,6 +511,7 @@
     el.shootOpponent.disabled = !canAct || state.stealOptions.length > 0;
     el.shootSelf.disabled = !canAct || state.stealOptions.length > 0;
     el.actionPrompt = byId("pvp-action-prompt");
+    el.actionPrompt.hidden = choosingItem;
     el.actionPrompt.textContent = state.status === "finished" ? "MATCH COMPLETE." : "SELECT AN ACTION:";
   }
 
