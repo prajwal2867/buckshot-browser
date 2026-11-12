@@ -1097,6 +1097,7 @@
   });
 
   keypad.addEventListener("click", (event) => {
+    if (document.body.classList.contains("multiplayer-active")) return;
     const button = event.target.closest("button");
     if (!button || button.disabled) return;
     const key = button.dataset.key;
