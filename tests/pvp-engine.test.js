@@ -112,6 +112,7 @@ test("opening the inventory records Story Mode-style numbered menu events privat
 
 test("empty inventory and invalid item-menu selections are recorded privately", () => {
   const state = gameWithTurn();
+  state.players[0].inventory = [];
   performAction(state, "a", { type: "item:menu" });
   assert.ok(getPlayerView(state, "a").events.includes("Your inventory is empty."));
   assert.equal(getPlayerView(state, "b").events.includes("Your inventory is empty."), false);
