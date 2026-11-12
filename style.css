@@ -600,3 +600,23 @@ body.main-menu #command-input {
   align-items: flex-start;
   gap: .1rem;
 }
+
+
+/* Keep item names tucked away until the player explicitly opens the action. */
+.multiplayer-panel .pvp-item-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .1rem;
+  margin: .15rem 0 .35rem 1rem;
+}
+.multiplayer-panel .pvp-item-menu[hidden] { display: none !important; }
+.multiplayer-panel .pvp-use-item {
+  min-height: 0;
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  line-height: 1.35;
+}
