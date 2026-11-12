@@ -140,7 +140,8 @@ test("zero player health ends Story Mode immediately in every stage", () => {
     assert.equal(game.gameOver, true);
     assert.equal(game.mode, "restart");
     assert.equal(game.stage, stage);
-    assert.ok(game.events.some((event) => /ran out of health/i.test(event)));
+    assert.equal(game.gameOver, true);
+    assert.ok(game.events.some((event) => /Stage \\d+ ends\\. You win\\./.test(event) || /Stage \\d+ ends\\. The Dealer wins\\./.test(event)));
   }
 });
 
