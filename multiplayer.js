@@ -488,6 +488,7 @@
     el.commandForm.hidden = !choosingItem;
     el.commandPrompt.textContent = state.stealOptions.length ? "Steal item number:" : "Item number:";
     el.commandInput.disabled = !canAct;
+    el.keypad.querySelectorAll("button").forEach((button) => { button.disabled = !canAct; });
     if (choosingItem && canAct) el.commandInput.focus();
 
     el.turn.textContent = state.status === "finished"
@@ -589,6 +590,8 @@
     el.shootSelf.disabled = true;
     el.inventory.querySelectorAll("button").forEach((button) => { button.disabled = true; });
     el.steal.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+    el.commandInput.disabled = true;
+    el.keypad.querySelectorAll("button").forEach((button) => { button.disabled = true; });
     socket.emit("game:action", { code: activeRoomCode, action });
   }
 
