@@ -30,7 +30,7 @@
     title: byId("multiplayer-title"), identity: byId("multiplayer-identity"), username: byId("multiplayer-username"),
     saveUsername: byId("username-save"), changeUsername: byId("username-change"),
     lobby: byId("multiplayer-lobby"), playerName: byId("multiplayer-player-name"),
-    create: byId("room-create"), joinOpen: byId("room-join-open"),
+    create: byId("room-create"), joinOpen: byId("room-join-open"), lobbyKeypad: byId("pvp-lobby-keypad"),
     joinForm: byId("room-join-form"), joinCode: byId("room-code"),
     room: byId("multiplayer-room"), status: byId("multiplayer-status"), wallet: byId("multiplayer-wallet"),
     wagerPanel: byId("wager-panel"), wagerForm: byId("wager-proposal-form"), wagerStake: byId("wager-stake"),
@@ -678,6 +678,13 @@
     el.joinOpen.hidden = true;
     el.joinForm.hidden = false;
     el.joinCode.focus();
+  });
+
+  el.lobbyKeypad.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-lobby-key]");
+    if (!button) return;
+    if (button.dataset.lobbyKey === "1") el.create.click();
+    if (button.dataset.lobbyKey === "2") el.joinOpen.click();
   });
   el.joinForm.addEventListener("submit", (event) => {
     event.preventDefault();
