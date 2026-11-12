@@ -568,7 +568,7 @@
     if (!el.commandInput.readOnly) el.commandInput.focus();
   });
 
-  const commandInputMedia = window.matchMedia("(max-width: 640px), (pointer: coarse)");
+  const commandInputMedia = window.matchMedia("(max-width: 900px), (pointer: coarse), (hover: none)");
   el.commandInput.readOnly = commandInputMedia.matches;
   commandInputMedia.addEventListener("change", () => {
     el.commandInput.readOnly = commandInputMedia.matches;
