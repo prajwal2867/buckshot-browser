@@ -191,7 +191,7 @@ body.main-menu #command-form { display: none !important; }
 }
 #keypad { display: none; }
 
-@media (max-width: 640px), (pointer: coarse) {
+@media (max-width: 900px), (pointer: coarse), (hover: none) {
   :root { font-size: clamp(10px, 3vw, 14px); }
   body {
     box-sizing: border-box;
@@ -867,7 +867,7 @@ body.multiplayer-active .pvp-known-shell:empty {
   display: none;
 }
 
-@media (max-width: 640px), (pointer: coarse) {
+@media (max-width: 900px), (pointer: coarse), (hover: none) {
   body.multiplayer-active {
     box-sizing: border-box;
     min-height: 100vh;
@@ -926,7 +926,7 @@ body.multiplayer-active .pvp-scoreboard .pvp-items-start {
 
 
 /* Keep mobile command prompts and their numeric input together, above the fixed keypad. */
-@media (max-width: 640px), (pointer: coarse) {
+@media (max-width: 900px), (pointer: coarse), (hover: none) {
   body.story-active #command-form,
   body.multiplayer-active .pvp-command-form {
     display: flex;
