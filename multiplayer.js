@@ -44,7 +44,7 @@
     reconnect: byId("multiplayer-reconnect"), expiry: byId("room-expiry"),
     balance: byId("pvp-balance"), wager: byId("pvp-wager"), versus: byId("pvp-versus"), stage: byId("pvp-stage"), turn: byId("pvp-turn"), scoreboard: byId("pvp-scoreboard"),
     magazine: byId("pvp-magazine"), known: byId("pvp-known-shell"),
-    shootOpponent: byId("pvp-shoot-opponent"), shootSelf: byId("pvp-shoot-self"),
+    controls: byId("pvp-controls"), shootOpponent: byId("pvp-shoot-opponent"), shootSelf: byId("pvp-shoot-self"),
     inventory: byId("pvp-inventory"), steal: byId("pvp-steal"), events: byId("pvp-events"),
     commandForm: byId("pvp-command-form"), commandPrompt: byId("pvp-command-prompt"),
     commandInput: byId("pvp-command-input"), keypad: byId("pvp-keypad")
@@ -446,7 +446,9 @@
     });
     useItem.className = "pvp-use-item";
     useItem.disabled = !canAct || state.stealOptions.length > 0;
+    useItem.hidden = itemMenuOpen || state.stealOptions.length > 0;
     el.inventory.append(useItem);
+    el.controls.hidden = itemMenuOpen || state.stealOptions.length > 0;
     if (itemMenuOpen && own?.inventory.length) {
       const heading = document.createElement("p");
       heading.className = "pvp-line";
@@ -717,6 +719,14 @@
       target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)
     );
     if (isTyping) return;
+    if (itemMenuOpen || latestGame?.stealOptions?.length) {
+      if (/^[0-9]$/.test(event.key)) {
+        event.preventDefault();
+        el.commandInput.value += event.key;
+        el.commandInput.focus();
+      }
+      return;
+    }
 
     const key = event.key;
     let action = null;
