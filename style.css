@@ -580,10 +580,10 @@ body.main-menu #command-input {
 .event-log {
   margin-top: 1.25rem;
 }
-.event-log,
+ .event-log,
 .pvp-events {
   display: block;
-  max-height: 180px;
+  max-height: 4.5em;
   overflow-y: auto;
   overscroll-behavior: contain;
   margin: 8px 0 0;
@@ -796,7 +796,7 @@ body.multiplayer-active .pvp-recent-heading {
   letter-spacing: .035em;
 }
 body.multiplayer-active .pvp-events {
-  max-height: 180px;
+  max-height: 4.5em;
   margin: 8px 0 1rem;
   padding: 0;
   border: 0;
